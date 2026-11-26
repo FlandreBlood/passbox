@@ -1,0 +1,9 @@
+node_modules/
+dist-test/
+dist/plugin-bundle/
+*.tsbuildinfo
+.passbox-dev/
+.tmp/
+*.log
+.DS_Store
+Thumbs.db

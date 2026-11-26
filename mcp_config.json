@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "core": {
+      "command": "node",
+      "args": ["${PLUGIN_ROOT}/dist/interface/mcp-server.js"],
+      "timeoutSeconds": 600
+    }
+  }
+}

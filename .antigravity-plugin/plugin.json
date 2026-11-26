@@ -1,0 +1,23 @@
+{
+  "$schema": "https://antigravity.google/schemas/v1/plugin.json",
+  "name": "passbox",
+  "displayName": "Passbox",
+  "version": "0.2.0",
+  "description": "跨 Harness 协作插件：在上下文隔离、确定性 Git 证据采集、按需引导与双行实时状态面板下将工程任务委托给原生 Codex CLI。Cross-harness delegation to Codex with context isolation, deterministic Git evidence, selective steering, and a live bilingual status board.",
+  "logo": "assets/logo.svg",
+  "author": "Passbox Contributors",
+  "license": "MIT",
+  "keywords": [
+    "codex",
+    "orchestration",
+    "delegation",
+    "evidence",
+    "mcp",
+    "verification"
+  ],
+  "suggestedPrompts": [
+    "使用 /passbox 将此问题修复委托给 Codex 并在完成后独立验证 | Use /passbox to delegate this bugfix to Codex and verify independently",
+    "使用 /passbox 收集当前任务的最新证据增量 | Use /passbox to collect the latest evidence delta for the active task",
+    "使用 /passbox 基于已验证的上游不变量引导当前任务 | Use /passbox to steer the active task with verified upstream invariants"
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "name": "passbox",
+  "version": "0.2.0",
+  "description": "Antigravity native cross-harness orchestration plugin for Gemini and Codex collaboration via context isolation, deterministic evidence collection, and selective steering.",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "files": [
+    ".antigravity-plugin/",
+    "mcp_config.json",
+    "skills/",
+    "assets/",
+    "dist/",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node scripts/build-bundle.mjs",
+    "build:test": "tsc -p tsconfig.test.json",
+    "typecheck": "tsc -p tsconfig.test.json --noEmit",
+    "test": "npm run build && npm run build:test && node --test dist-test/tests/*.test.js",
+    "validate:plugin": "agy plugin validate . && agy plugin validate --strict ./dist/plugin-bundle"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.0"
+  }
+}

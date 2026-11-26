@@ -1,0 +1,1936 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Passbox Status Board</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --pb-bg: var(--color-background-primary, var(--background, #f7f8fa));
+      --pb-surface: var(--color-background-secondary, var(--card, #ffffff));
+      --pb-surface-subtle: var(--color-background-tertiary, var(--muted, #f0f2f5));
+      --pb-fg: var(--color-text-primary, var(--foreground, #181b20));
+      --pb-fg-2: var(--color-text-secondary, var(--secondary-foreground, #454d59));
+      --pb-fg-muted: var(--color-text-tertiary, var(--muted-foreground, #6e7785));
+      --pb-border: var(--color-border-primary, var(--card-border, rgba(15, 23, 42, 0.10)));
+      --pb-border-soft: var(--color-border-secondary, var(--border, rgba(15, 23, 42, 0.06)));
+      --pb-accent: var(--primary, #2563eb);
+      --pb-ok: #16a34a;
+      --pb-ok-bg: rgba(22, 163, 74, 0.11);
+      --pb-warn: #d97706;
+      --pb-warn-bg: rgba(217, 119, 6, 0.12);
+      --pb-err: #dc2626;
+      --pb-err-bg: rgba(220, 38, 38, 0.11);
+      --pb-info: #2563eb;
+      --pb-info-bg: rgba(37, 99, 235, 0.11);
+      --pb-neutral-bg: rgba(100, 116, 139, 0.11);
+      --pb-font: var(--font-sans, var(--font-family, "Google Sans Flex", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif));
+      --pb-mono: var(--editor-font-family, "Google Sans Code", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+      --r-sm: 5px;
+      --r-md: 8px;
+      --r-lg: 10px;
+    }
+
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+      --pb-bg: var(--color-background-primary, var(--background, #111317));
+      --pb-surface: var(--color-background-secondary, var(--card, #181b21));
+      --pb-surface-subtle: var(--color-background-tertiary, var(--muted, #20242c));
+      --pb-fg: var(--color-text-primary, var(--foreground, #eef0f4));
+      --pb-fg-2: var(--color-text-secondary, var(--secondary-foreground, #c2c8d4));
+      --pb-fg-muted: var(--color-text-tertiary, var(--muted-foreground, #8b94a5));
+      --pb-border: var(--color-border-primary, var(--card-border, rgba(255, 255, 255, 0.11)));
+      --pb-border-soft: var(--color-border-secondary, var(--border, rgba(255, 255, 255, 0.07)));
+      --pb-accent: var(--primary, #60a5fa);
+      --pb-ok: #4ade80;
+      --pb-ok-bg: rgba(74, 222, 128, 0.13);
+      --pb-warn: #fbbf24;
+      --pb-warn-bg: rgba(251, 191, 36, 0.14);
+      --pb-err: #f87171;
+      --pb-err-bg: rgba(248, 113, 113, 0.14);
+      --pb-info: #60a5fa;
+      --pb-info-bg: rgba(96, 165, 250, 0.14);
+      --pb-neutral-bg: rgba(148, 163, 184, 0.14);
+    }
+
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: var(--pb-font);
+      font-size: 13px;
+      line-height: 1.45;
+      color: var(--pb-fg);
+      background: var(--pb-bg);
+      -webkit-font-smoothing: antialiased;
+    }
+    body.mode-inline {
+      background: transparent;
+    }
+    button {
+      font: inherit;
+      color: inherit;
+      cursor: pointer;
+      border: 0;
+      background: transparent;
+    }
+    code, .mono {
+      font-family: var(--pb-mono);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .app-shell {
+      max-width: 920px;
+      margin: 0 auto;
+      padding: 0 12px 18px;
+    }
+    body.mode-inline .app-shell {
+      max-width: none;
+      padding: 4px 2px 6px;
+    }
+
+    /* Top bar */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background: var(--pb-bg);
+      border-bottom: 1px solid var(--pb-border);
+      padding: 10px 0 8px;
+      margin-bottom: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    body.mode-inline .topbar {
+      position: static;
+      background: transparent;
+      padding: 2px 0 6px;
+      margin-bottom: 8px;
+    }
+
+    .topbar-main {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+    .brand-icon {
+      width: 20px;
+      height: 20px;
+      border-radius: 5px;
+      background: var(--pb-info-bg);
+      color: var(--pb-info);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 11px;
+      border: 1px solid rgba(37, 99, 235, 0.25);
+      flex: none;
+    }
+    .brand-title {
+      font-size: 13.5px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      white-space: nowrap;
+    }
+
+    .live-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11.5px;
+      color: var(--pb-fg-muted);
+      padding: 2px 7px;
+      border-radius: 999px;
+      background: var(--pb-surface-subtle);
+    }
+    .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--pb-fg-muted);
+      position: relative;
+      flex: none;
+    }
+    .dot.pulse {
+      background: var(--pb-ok);
+    }
+    .dot.pulse::after {
+      content: "";
+      position: absolute;
+      inset: -2px;
+      border-radius: 50%;
+      border: 1.5px solid var(--pb-ok);
+      opacity: 0.6;
+      animation: pb-ping 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
+    }
+    .dot.ok { background: var(--pb-ok); }
+    .dot.warn { background: var(--pb-warn); }
+    .dot.err { background: var(--pb-err); }
+    @keyframes pb-ping {
+      0% { transform: scale(0.9); opacity: 0.75; }
+      80%, 100% { transform: scale(2.1); opacity: 0; }
+    }
+
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .default-model-chip {
+      font-size: 11px;
+      color: var(--pb-fg-2);
+      background: var(--pb-surface-subtle);
+      border: 1px solid var(--pb-border-soft);
+      padding: 2px 7px;
+      border-radius: var(--r-sm);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .seg-group {
+      display: inline-flex;
+      background: var(--pb-surface-subtle);
+      border: 1px solid var(--pb-border-soft);
+      border-radius: 6px;
+      padding: 1px;
+    }
+    .seg-btn {
+      font-size: 11px;
+      padding: 2px 7px;
+      border-radius: 4px;
+      color: var(--pb-fg-muted);
+      font-weight: 500;
+      transition: all 0.12s ease;
+    }
+    .seg-btn:hover { color: var(--pb-fg); }
+    .seg-btn.active {
+      background: var(--pb-surface);
+      color: var(--pb-fg);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+    }
+    .icon-btn {
+      height: 24px;
+      padding: 0 7px;
+      border-radius: 5px;
+      font-size: 11.5px;
+      color: var(--pb-fg-2);
+      background: var(--pb-surface-subtle);
+      border: 1px solid var(--pb-border-soft);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .icon-btn:hover {
+      border-color: var(--pb-border);
+      color: var(--pb-fg);
+    }
+
+    .filter-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .filter-tabs {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .filter-tab {
+      font-size: 11.5px;
+      padding: 3px 9px;
+      border-radius: 999px;
+      color: var(--pb-fg-muted);
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .filter-tab:hover { color: var(--pb-fg); background: var(--pb-surface-subtle); }
+    .filter-tab.active {
+      color: var(--pb-fg);
+      background: var(--pb-surface);
+      border: 1px solid var(--pb-border);
+      font-weight: 500;
+    }
+    .count-num {
+      font-family: var(--pb-mono);
+      font-size: 10.5px;
+      opacity: 0.85;
+    }
+
+    /* Task Cards */
+    .task-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .task-card {
+      background: var(--pb-surface);
+      border: 1px solid var(--pb-border);
+      border-radius: var(--r-lg);
+      overflow: hidden;
+      transition: border-color 0.14s ease;
+    }
+    .task-card.is-running {
+      border-color: rgba(22, 163, 74, 0.45);
+    }
+    .task-card.is-attention {
+      border-color: rgba(220, 38, 38, 0.38);
+    }
+
+    .card-head {
+      padding: 9px 12px;
+      border-bottom: 1px solid var(--pb-border-soft);
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .card-head:hover {
+      background: var(--pb-surface-subtle);
+    }
+    .head-left {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      min-width: 0;
+      flex: 1;
+    }
+    .head-dot-wrap {
+      padding-top: 5px;
+      flex: none;
+    }
+    .title-stack {
+      min-width: 0;
+      flex: 1;
+    }
+    .task-objective {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--pb-fg);
+      display: -webkit-box;
+      -webkit-line-clamp: 1;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      word-break: break-word;
+    }
+    .task-submeta {
+      margin-top: 3px;
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--pb-fg-muted);
+    }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 11px;
+      line-height: 1.4;
+      background: var(--pb-surface-subtle);
+      color: var(--pb-fg-2);
+      white-space: nowrap;
+    }
+    .chip.clickable:hover {
+      color: var(--pb-fg);
+      outline: 1px solid var(--pb-border);
+    }
+    .chip.ok { background: var(--pb-ok-bg); color: var(--pb-ok); font-weight: 500; }
+    .chip.warn { background: var(--pb-warn-bg); color: var(--pb-warn); font-weight: 500; }
+    .chip.err { background: var(--pb-err-bg); color: var(--pb-err); font-weight: 500; }
+    .chip.info { background: var(--pb-info-bg); color: var(--pb-info); font-weight: 500; }
+    .chip.neutral { background: var(--pb-neutral-bg); color: var(--pb-fg-2); }
+
+    .head-right {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex: none;
+    }
+    .diff-stat {
+      font-family: var(--pb-mono);
+      font-size: 11px;
+      display: inline-flex;
+      gap: 4px;
+    }
+    .ins { color: var(--pb-ok); }
+    .del { color: var(--pb-err); }
+    .chev {
+      font-size: 11px;
+      color: var(--pb-fg-muted);
+      transition: transform 0.15s ease;
+      padding: 2px 4px;
+    }
+    .task-card.expanded .chev {
+      transform: rotate(180deg);
+    }
+
+    /* Dual-Agent Two-Row Lanes */
+    .agent-lanes {
+      padding: 8px 12px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      position: relative;
+    }
+    .agent-row {
+      display: grid;
+      grid-template-columns: 185px 1fr auto;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      border-radius: var(--r-md);
+      background: var(--pb-surface-subtle);
+      border: 1px solid var(--pb-border-soft);
+    }
+    @media (max-width: 560px) {
+      .agent-row {
+        grid-template-columns: 1fr;
+        gap: 5px;
+      }
+    }
+    .role-cell {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+    }
+    .role-tag {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 1px 5px;
+      border-radius: 3px;
+      letter-spacing: 0.02em;
+      flex: none;
+    }
+    .role-tag.coord {
+      background: var(--pb-info-bg);
+      color: var(--pb-info);
+    }
+    .role-tag.exec {
+      background: var(--pb-ok-bg);
+      color: var(--pb-ok);
+    }
+    .model-label {
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--pb-fg);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .model-label.unrecorded {
+      font-weight: 400;
+      color: var(--pb-fg-muted);
+    }
+    .src-badge {
+      font-size: 10px;
+      color: var(--pb-fg-muted);
+      border: 1px solid var(--pb-border-soft);
+      background: var(--pb-surface);
+      padding: 0 4px;
+      border-radius: 3px;
+      flex: none;
+    }
+
+    .status-cell {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+      min-width: 0;
+    }
+    .event-ticker {
+      font-family: var(--pb-mono);
+      font-size: 11px;
+      color: var(--pb-fg-muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 290px;
+    }
+
+    .phase-steps {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+    }
+    .phase-step {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--pb-border);
+    }
+    .phase-step.done { background: var(--pb-ok); opacity: 0.65; }
+    .phase-step.current {
+      width: 12px;
+      border-radius: 4px;
+      background: var(--pb-info);
+    }
+
+    .right-cell {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .timer {
+      font-family: var(--pb-mono);
+      font-size: 11.5px;
+      font-weight: 500;
+      color: var(--pb-fg-2);
+    }
+    .timer.live {
+      color: var(--pb-info);
+      font-weight: 600;
+    }
+    .danger-btn {
+      font-size: 11px;
+      padding: 2px 7px;
+      border-radius: 4px;
+      background: var(--pb-err-bg);
+      color: var(--pb-err);
+      border: 1px solid rgba(220, 38, 38, 0.3);
+      font-weight: 500;
+    }
+
+    /* Expandable Detail Drawer */
+    .detail-drawer {
+      border-top: 1px solid var(--pb-border);
+      background: var(--pb-bg);
+      padding: 10px 12px 12px;
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .task-card.expanded .detail-drawer {
+      display: flex;
+    }
+
+    .rev-selector {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .rev-pill {
+      font-size: 11.5px;
+      padding: 3px 9px;
+      border-radius: 6px;
+      background: var(--pb-surface);
+      border: 1px solid var(--pb-border-soft);
+      color: var(--pb-fg-2);
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .rev-pill:hover { border-color: var(--pb-border); color: var(--pb-fg); }
+    .rev-pill.active {
+      border-color: var(--pb-accent);
+      color: var(--pb-fg);
+      font-weight: 600;
+    }
+
+    /* Three-Way Firewall Grid */
+    .verdict-headline {
+      padding: 7px 10px;
+      border-radius: var(--r-md);
+      background: var(--pb-surface);
+      border: 1px solid var(--pb-border-soft);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+      font-size: 12px;
+    }
+    .verdict-summary-text {
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .firewall-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+    @media (max-width: 540px) {
+      .firewall-grid { grid-template-columns: 1fr; }
+    }
+    .fw-box {
+      background: var(--pb-surface);
+      border: 1px solid var(--pb-border-soft);
+      border-radius: var(--r-md);
+      padding: 7px 9px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .fw-label {
+      font-size: 10.5px;
+      color: var(--pb-fg-muted);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .fw-value {
+      font-size: 12px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      flex-wrap: wrap;
+    }
+    .fw-sub {
+      font-size: 10.5px;
+      color: var(--pb-fg-muted);
+      font-family: var(--pb-mono);
+    }
+
+    /* Sections inside Detail */
+    .detail-section {
+      background: var(--pb-surface);
+      border: 1px solid var(--pb-border-soft);
+      border-radius: var(--r-md);
+      padding: 8px 10px;
+    }
+    .sec-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--pb-fg-2);
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .claim-list {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .claim-item {
+      font-size: 11.5px;
+      padding: 5px 7px;
+      border-radius: 5px;
+      background: var(--pb-surface-subtle);
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .claim-ev {
+      font-family: var(--pb-mono);
+      font-size: 10.5px;
+      color: var(--pb-info);
+      cursor: pointer;
+      align-self: flex-start;
+    }
+    .claim-ev:hover { text-decoration: underline; }
+
+    .file-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .file-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-family: var(--pb-mono);
+      font-size: 11px;
+      padding: 3px 6px;
+      border-radius: 4px;
+    }
+    .file-row:hover { background: var(--pb-surface-subtle); }
+    .file-path {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+    .file-path:hover { color: var(--pb-info); text-decoration: underline; }
+
+    .empty-box {
+      padding: 28px 16px;
+      text-align: center;
+      background: var(--pb-surface);
+      border: 1px dashed var(--pb-border);
+      border-radius: var(--r-lg);
+      color: var(--pb-fg-muted);
+    }
+    .empty-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--pb-fg-2);
+      margin-bottom: 4px;
+    }
+    .toast {
+      position: fixed;
+      bottom: 12px;
+      right: 12px;
+      padding: 5px 10px;
+      border-radius: 6px;
+      background: var(--pb-fg);
+      color: var(--pb-bg);
+      font-size: 11.5px;
+      z-index: 99;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.16s ease;
+    }
+    .toast.show { opacity: 0.94; }
+  </style>
+</head>
+<body>
+  <div id="root" class="app-shell"></div>
+  <div id="toast" class="toast"></div>
+
+  <script>
+    (() => {
+      const I18N = {
+        zh: {
+          boardTitle: 'Passbox 状态面板',
+          liveSync: '实时同步',
+          idleSync: '已就绪',
+          defaultModelPrefix: '默认 Codex:',
+          cliDefault: 'CLI 默认',
+          filterAll: '全部任务',
+          filterRunning: '运行中',
+          filterAttention: '异常/中断',
+          showAllTasks: '查看全部任务',
+          focusSingleTask: '仅看当前任务',
+          refresh: '刷新',
+          coordRole: '主代理',
+          execRole: '执行器',
+          modelUnrecorded: '模型未登记',
+          srcExplicit: '手动指定',
+          srcStream: '事件流实测',
+          srcRollout: '会话实测',
+          srcConfig: 'config.toml',
+          srcDefault: 'CLI 默认',
+          bridgeCollecting: '等待收集中',
+          bridgeQueued: '已排队引导',
+          bridgeRunning: '后台运行中',
+          bridgeCanceled: '已取消',
+          bridgeCollected: '已完成收集',
+          bridgeReady: '空闲就绪',
+          actDelegated: '发起委托',
+          actCollecting: '等待结果',
+          actCollected: '已收回证据',
+          actSteered: '引导续跑',
+          actQueuedSteer: '排队引导',
+          actCanceled: '请求取消',
+          phaseStarting: '启动中',
+          phaseInvestigating: '检索分析',
+          phaseEditing: '修改代码',
+          phaseVerifying: '运行验证',
+          phaseResponding: '生成报告',
+          phaseCompleted: '已完成',
+          phaseIdle: '空闲',
+          modeInitial: '首次委托',
+          modeResume: '续接会话',
+          modeReset: '重置上下文',
+          wsSnapshot: '原地快照',
+          wsWorktree: '隔离工作树',
+          readOnlyZeroDiff: '0 改动',
+          cancelBtn: '取消',
+          cancelConfirm: '确认取消?',
+          canceling: '取消中…',
+          fwExecTitle: '进程执行状态',
+          fwReportTitle: '模型自报结果 (未核验)',
+          fwVerifyTitle: '独立验证结果',
+          execRunning: '执行中',
+          execSucceeded: '执行成功',
+          execFailed: '执行失败',
+          execCanceled: '已取消',
+          execTimedOut: '执行超时',
+          repCompleted: '自报完成',
+          repPartial: '部分完成',
+          repBlocked: '自报受阻',
+          repMissing: '未返回报告',
+          repInvalid: '报告无效/中断',
+          verPassed: '独立验证通过',
+          verFailed: '独立验证失败',
+          verTimedOut: '验证命令超时',
+          verError: '验证命令异常',
+          verNotRun: '独立验证未运行',
+          secBlockers: '模型报告的问题 / 阻碍 (待核验)',
+          secCounter: '反证 / 已核实结论 (待核验)',
+          secFiles: '本轮文件变更',
+          secVerifyCmds: '独立验证命令结果',
+          secEvents: '原生 Harness 事件与诊断',
+          tokensLabel: 'Token 用量',
+          tokIn: '输入',
+          tokCache: '缓存',
+          tokOut: '输出',
+          tokReason: '推理',
+          emptyTitle: '暂无 Passbox 委托任务',
+          emptyDesc: '在对话中输入 /passbox 发起跨模型任务后，这里会实时展示主代理与 Codex 的双行运行状态及修订证据。',
+          loadingTitle: '正在连接 Passbox 状态服务…',
+          copied: '已复制: ',
+          unpublishedRun: '运行中 (未发布修订)',
+        },
+        en: {
+          boardTitle: 'Passbox Mission Control',
+          liveSync: 'Live',
+          idleSync: 'Ready',
+          defaultModelPrefix: 'Default Codex:',
+          cliDefault: 'CLI Default',
+          filterAll: 'All',
+          filterRunning: 'Running',
+          filterAttention: 'Attention',
+          showAllTasks: 'All Tasks',
+          focusSingleTask: 'Focused Task',
+          refresh: 'Refresh',
+          coordRole: 'Host',
+          execRole: 'Codex',
+          modelUnrecorded: 'Model unrecorded',
+          srcExplicit: 'explicit',
+          srcStream: 'stream',
+          srcRollout: 'rollout',
+          srcConfig: 'config.toml',
+          srcDefault: 'CLI default',
+          bridgeCollecting: 'Collecting',
+          bridgeQueued: 'Steer Queued',
+          bridgeRunning: 'Delegated',
+          bridgeCanceled: 'Canceled',
+          bridgeCollected: 'Collected',
+          bridgeReady: 'Idle',
+          actDelegated: 'Delegated',
+          actCollecting: 'Waiting collect',
+          actCollected: 'Collected',
+          actSteered: 'Steered',
+          actQueuedSteer: 'Queued steer',
+          actCanceled: 'Canceled',
+          phaseStarting: 'Starting',
+          phaseInvestigating: 'Investigating',
+          phaseEditing: 'Editing',
+          phaseVerifying: 'Verifying',
+          phaseResponding: 'Responding',
+          phaseCompleted: 'Completed',
+          phaseIdle: 'Idle',
+          modeInitial: 'initial',
+          modeResume: 'resume',
+          modeReset: 'reset_context',
+          wsSnapshot: 'snapshot',
+          wsWorktree: 'worktree',
+          readOnlyZeroDiff: '0 changes',
+          cancelBtn: 'Cancel',
+          cancelConfirm: 'Confirm?',
+          canceling: 'Canceling…',
+          fwExecTitle: 'Execution Status',
+          fwReportTitle: 'Model Self-Report (Unverified)',
+          fwVerifyTitle: 'Independent Verification',
+          execRunning: 'Running',
+          execSucceeded: 'Succeeded',
+          execFailed: 'Failed',
+          execCanceled: 'Canceled',
+          execTimedOut: 'Timed Out',
+          repCompleted: 'Completed',
+          repPartial: 'Partial',
+          repBlocked: 'Blocked',
+          repMissing: 'Missing',
+          repInvalid: 'Invalid / Interrupted',
+          verPassed: 'Verification Passed',
+          verFailed: 'Verification Failed',
+          verTimedOut: 'Verification Timed Out',
+          verError: 'Verification Error',
+          verNotRun: 'Verification Not Run',
+          secBlockers: 'Reported Findings / Blockers (Unverified)',
+          secCounter: 'Counter-Evidence / Confirmed Notes (Unverified)',
+          secFiles: 'Changed Files in Round',
+          secVerifyCmds: 'Independent Verification Commands',
+          secEvents: 'Native Harness Events & Diagnostics',
+          tokensLabel: 'Tokens',
+          tokIn: 'in',
+          tokCache: 'cached',
+          tokOut: 'out',
+          tokReason: 'reasoning',
+          emptyTitle: 'No Passbox tasks yet',
+          emptyDesc: 'Invoke /passbox in chat to delegate an engineering task; live two-row Coordinator & Codex telemetry will appear here.',
+          loadingTitle: 'Connecting to Passbox server…',
+          copied: 'Copied: ',
+          unpublishedRun: 'Running (unpublished)',
+        },
+      };
+
+      const state = {
+        lang: 'zh',
+        filter: 'all',
+        inlineFocusedOnly: false,
+        initialFocusTaskId: null,
+        board: null,
+        expandedTasks: new Set(),
+        selectedRunByTask: new Map(),
+        confirmCancelTask: null,
+        cancelingTasks: new Set(),
+        displayMode: 'pane',
+        connected: false,
+        pollInFlight: false,
+        lastUpdatedMs: 0,
+      };
+
+      const t = (key) => (I18N[state.lang] && I18N[state.lang][key]) || I18N.zh[key] || key;
+
+      function esc(val) {
+        return String(val ?? '')
+          .split('&').join('&amp;')
+          .split('<').join('&lt;')
+          .split('>').join('&gt;')
+          .split('"').join('&quot;')
+          .split("'").join('&#39;');
+      }
+
+      function showToast(msg) {
+        const el = document.getElementById('toast');
+        if (!el) return;
+        el.textContent = msg;
+        el.classList.add('show');
+        clearTimeout(showToast._timer);
+        showToast._timer = setTimeout(() => el.classList.remove('show'), 1800);
+      }
+
+      function formatDuration(ms) {
+        if (ms === null || ms === undefined || Number.isNaN(ms)) return '—';
+        const totalSec = Math.max(0, Math.floor(ms / 1000));
+        const h = Math.floor(totalSec / 3600);
+        const m = Math.floor((totalSec % 3600) / 60);
+        const s = totalSec % 60;
+        if (h > 0) return h + 'h ' + String(m).padStart(2, '0') + 'm';
+        if (m > 0) return m + 'm ' + String(s).padStart(2, '0') + 's';
+        return s + 's';
+      }
+
+      function formatClock(iso) {
+        if (!iso) return '';
+        const d = new Date(iso);
+        if (Number.isNaN(d.getTime())) return '';
+        return (
+          String(d.getHours()).padStart(2, '0') +
+          ':' +
+          String(d.getMinutes()).padStart(2, '0') +
+          ':' +
+          String(d.getSeconds()).padStart(2, '0')
+        );
+      }
+
+      function formatCompactNum(n) {
+        if (typeof n !== 'number' || Number.isNaN(n)) return '0';
+        if (n >= 1000000) return (n / 1000000).toFixed(2) + 'M';
+        if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
+        return String(n);
+      }
+
+      // --- Minimal compliant SEP-1865 MCP Apps JSON-RPC 2.0 Client ---
+      let rpcSeq = 1;
+      const pendingRpc = new Map();
+
+      function sendRpcRequest(method, params) {
+        const id = rpcSeq++;
+        return new Promise((resolve, reject) => {
+          pendingRpc.set(id, { resolve, reject });
+          window.parent.postMessage({ jsonrpc: '2.0', id, method, params }, '*');
+          setTimeout(() => {
+            if (pendingRpc.has(id)) {
+              pendingRpc.delete(id);
+              reject(new Error('RPC timeout: ' + method));
+            }
+          }, 15000);
+        });
+      }
+
+      function sendRpcNotification(method, params) {
+        window.parent.postMessage({ jsonrpc: '2.0', method, ...(params ? { params } : {}) }, '*');
+      }
+
+      function applyHostContext(ctx) {
+        if (!ctx || typeof ctx !== 'object') return;
+        if (ctx.theme === 'dark' || ctx.theme === 'light') {
+          document.documentElement.setAttribute('data-theme', ctx.theme);
+        }
+        if (ctx.styles && ctx.styles.variables && typeof ctx.styles.variables === 'object') {
+          for (const [k, v] of Object.entries(ctx.styles.variables)) {
+            if (typeof k === 'string' && k.startsWith('--') && typeof v === 'string') {
+              document.documentElement.style.setProperty(k, v);
+            }
+          }
+        }
+        if (ctx.containerDimensions && typeof ctx.containerDimensions.maxHeight === 'number') {
+          state.displayMode = 'inline';
+          document.body.classList.add('mode-inline');
+        }
+      }
+
+      function detectAmbientDarkTheme() {
+        if (document.documentElement.hasAttribute('data-theme')) return;
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+          document.documentElement.setAttribute('data-theme', 'dark');
+        }
+      }
+
+      function ingestToolPayload(payload) {
+        if (!payload || typeof payload !== 'object') return;
+        const sc = payload.structuredContent;
+        if (sc && Array.isArray(sc.tasks)) {
+          const firstArrival = !state.board;
+          state.board = sc;
+          state.lastUpdatedMs = Date.now();
+          if (sc.focus_task_id && !state.initialFocusTaskId) {
+            state.initialFocusTaskId = sc.focus_task_id;
+          }
+          if (firstArrival) {
+            const autoExpand = state.initialFocusTaskId || (sc.tasks[0] && sc.tasks[0].task_id);
+            if (autoExpand) state.expandedTasks.add(autoExpand);
+          }
+          renderBoard();
+          return;
+        }
+        const textBlock = Array.isArray(payload.content)
+          ? payload.content.find((c) => c && c.type === 'text' && typeof c.text === 'string')
+          : null;
+        if (textBlock) {
+          try {
+            const parsed = JSON.parse(textBlock.text);
+            if (parsed && typeof parsed.task_id === 'string') {
+              state.initialFocusTaskId = parsed.task_id;
+              state.expandedTasks.add(parsed.task_id);
+              if (state.displayMode === 'inline') {
+                state.inlineFocusedOnly = true;
+              }
+              void pollServerBoard();
+            }
+          } catch {}
+        }
+      }
+
+      window.addEventListener('message', (event) => {
+        const msg = event.data;
+        if (!msg || typeof msg !== 'object' || msg.jsonrpc !== '2.0') return;
+
+        if (Object.prototype.hasOwnProperty.call(msg, 'id') && (msg.result !== undefined || msg.error !== undefined)) {
+          const waiter = pendingRpc.get(msg.id);
+          if (waiter) {
+            pendingRpc.delete(msg.id);
+            if (msg.error) waiter.reject(new Error(msg.error.message || 'RPC error'));
+            else waiter.resolve(msg.result);
+          }
+          return;
+        }
+
+        if (msg.method === 'ping' && msg.id !== undefined) {
+          window.parent.postMessage({ jsonrpc: '2.0', id: msg.id, result: {} }, '*');
+          return;
+        }
+
+        if (msg.method === 'ui/notifications/tool-input') {
+          const args = msg.params && msg.params.arguments;
+          if (args && typeof args.task_id === 'string' && args.task_id) {
+            state.initialFocusTaskId = args.task_id;
+            state.expandedTasks.add(args.task_id);
+          }
+          return;
+        }
+
+        if (msg.method === 'ui/notifications/tool-result') {
+          ingestToolPayload(msg.params);
+          return;
+        }
+
+        if (msg.method === 'ui/notifications/host-context-changed') {
+          applyHostContext(msg.params);
+          renderBoard();
+        }
+      });
+
+      async function callServerTool(name, args) {
+        return sendRpcRequest('tools/call', { name, arguments: args || {} });
+      }
+
+      async function pollServerBoard() {
+        if (!state.connected || state.pollInFlight || document.hidden) return;
+        state.pollInFlight = true;
+        try {
+          const res = await callServerTool('passbox_status', {
+            include_board: true,
+            ...(state.initialFocusTaskId ? { task_id: state.initialFocusTaskId } : {}),
+          });
+          if (res) ingestToolPayload(res);
+        } catch {} finally {
+          state.pollInFlight = false;
+        }
+      }
+
+      function toFileUri(workspace, rawPathWithLine) {
+        const rawStr = String(rawPathWithLine || '').trim();
+        const colonIdx = rawStr.indexOf(':', 2);
+        const cleanRel = (colonIdx > 0 ? rawStr.slice(0, colonIdx) : rawStr).trim();
+        const normRel = cleanRel.split('\\').join('/');
+        const isAbs = normRel.startsWith('/') || (normRel.length >= 3 && normRel[1] === ':' && normRel[2] === '/');
+        let full = normRel;
+        if (!isAbs && workspace) {
+          let normWs = String(workspace).split('\\').join('/');
+          while (normWs.endsWith('/')) normWs = normWs.slice(0, -1);
+          full = normWs + '/' + normRel;
+        }
+        while (full.startsWith('/')) full = full.slice(1);
+        return 'file:///' + full;
+      }
+
+      async function openWorkspaceFileOrCopy(workspace, rawPathWithLine) {
+        if (!rawPathWithLine) return;
+        const fileUri = toFileUri(workspace, rawPathWithLine);
+        if (state.connected) {
+          try {
+            const res = await sendRpcRequest('com.google.antigravity/toggle-aux-pane', {
+              tabType: 'fileView',
+              uri: fileUri,
+            });
+            if (!res || !res.isError) return;
+          } catch {}
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          try {
+            await navigator.clipboard.writeText(rawPathWithLine);
+            showToast(t('copied') + rawPathWithLine);
+          } catch {}
+        }
+      }
+
+      // --- UI Helpers ---
+      function modelSourceLabel(src) {
+        if (src === 'explicit') return t('srcExplicit');
+        if (src === 'stream_event') return t('srcStream');
+        if (src === 'session_rollout') return t('srcRollout');
+        if (src === 'codex_config') return t('srcConfig');
+        return t('srcDefault');
+      }
+
+      function bridgeBadgeInfo(coord) {
+        const bs = coord.bridge_state;
+        if (bs === 'collecting') return { cls: 'info', text: t('bridgeCollecting') };
+        if (bs === 'queued_steer') {
+          return {
+            cls: 'warn',
+            text: t('bridgeQueued') + (coord.queued_steers_count ? ' (' + coord.queued_steers_count + ')' : ''),
+          };
+        }
+        if (bs === 'delegated_running') return { cls: 'ok', text: t('bridgeRunning') };
+        if (bs === 'canceled') return { cls: 'neutral', text: t('bridgeCanceled') };
+        if (bs === 'idle_collected') return { cls: 'neutral', text: t('bridgeCollected') };
+        return { cls: 'neutral', text: t('bridgeReady') };
+      }
+
+      function actionLabel(act) {
+        if (act === 'delegated') return t('actDelegated');
+        if (act === 'collecting') return t('actCollecting');
+        if (act === 'collected') return t('actCollected');
+        if (act === 'steered') return t('actSteered');
+        if (act === 'queued_steer') return t('actQueuedSteer');
+        if (act === 'canceled') return t('actCanceled');
+        return act || '';
+      }
+
+      function phaseLabel(phase) {
+        if (phase === 'starting') return t('phaseStarting');
+        if (phase === 'investigating') return t('phaseInvestigating');
+        if (phase === 'editing') return t('phaseEditing');
+        if (phase === 'verifying') return t('phaseVerifying');
+        if (phase === 'responding') return t('phaseResponding');
+        if (phase === 'completed') return t('phaseCompleted');
+        if (phase === 'idle') return t('phaseIdle');
+        return phase || '';
+      }
+
+      function renderPhaseStepper(phase, isRunning) {
+        const order = ['starting', 'investigating', 'editing', 'verifying', 'responding'];
+        const idx = order.indexOf(phase);
+        if (!isRunning) return '';
+        const dots = order.map((p, i) => {
+          const cls = i < idx ? 'phase-step done' : i === idx ? 'phase-step current' : 'phase-step';
+          return '<span class="' + cls + '"></span>';
+        });
+        return '<span class="phase-steps" aria-hidden="true">' + dots.join('') + '</span>';
+      }
+
+      function exitBadgeClass(code) {
+        if (code === 'running') return 'info';
+        if (code === 'normal') return 'ok';
+        if (code === 'canceled') return 'neutral';
+        if (code === 'timed_out' || code === 'incomplete_stream') return 'warn';
+        return 'err';
+      }
+
+      function execStatusBadge(status) {
+        if (status === 'running') return { cls: 'info', text: t('execRunning') };
+        if (status === 'succeeded') return { cls: 'ok', text: t('execSucceeded') };
+        if (status === 'canceled') return { cls: 'neutral', text: t('execCanceled') };
+        if (status === 'timed_out') return { cls: 'warn', text: t('execTimedOut') };
+        return { cls: 'err', text: t('execFailed') };
+      }
+
+      function reportedStatusBadge(rep) {
+        if (rep === 'completed') return { cls: 'ok', text: t('repCompleted') };
+        if (rep === 'partial') return { cls: 'warn', text: t('repPartial') };
+        if (rep === 'blocked') return { cls: 'err', text: t('repBlocked') };
+        if (rep === 'invalid') return { cls: 'err', text: t('repInvalid') };
+        return { cls: 'neutral', text: t('repMissing') };
+      }
+
+      function verifyStatusBadge(ver) {
+        if (ver === 'passed') return { cls: 'ok', text: t('verPassed') };
+        if (ver === 'failed') return { cls: 'err', text: t('verFailed') };
+        if (ver === 'timed_out') return { cls: 'warn', text: t('verTimedOut') };
+        if (ver === 'error') return { cls: 'err', text: t('verError') };
+        return { cls: 'neutral', text: t('verNotRun') };
+      }
+
+      function modeLabel(mode) {
+        if (mode === 'initial') return t('modeInitial');
+        if (mode === 'resume') return t('modeResume');
+        if (mode === 'reset_context') return t('modeReset');
+        return mode || '';
+      }
+
+      function isTaskAttention(task) {
+        if (task.state === 'running') return false;
+        const st = task.executor.status;
+        return st === 'failed' || st === 'timed_out' || st === 'canceled';
+      }
+
+      function renderTaskCard(task) {
+        const isRunning = task.state === 'running';
+        const isAttn = isTaskAttention(task);
+        const expanded = state.expandedTasks.has(task.task_id);
+
+        const dotCls = isRunning ? 'dot pulse' : isAttn ? 'dot err' : 'dot ok';
+        const cardCls =
+          'task-card' +
+          (isRunning ? ' is-running' : isAttn ? ' is-attention' : '') +
+          (expanded ? ' expanded' : '');
+
+        const lt = task.ledger_totals || { files_changed: 0, insertions: 0, deletions: 0 };
+        const diffHtml =
+          lt.files_changed > 0 || lt.insertions > 0 || lt.deletions > 0
+            ? '<span class="diff-stat"><span class="ins">+' +
+              lt.insertions +
+              '</span><span class="del">-' +
+              lt.deletions +
+              '</span></span>'
+            : '<span class="chip neutral">' + esc(t('readOnlyZeroDiff')) + '</span>';
+
+        const coord = task.coordinator;
+        const bridge = bridgeBadgeInfo(coord);
+        const coordModelHtml = coord.model
+          ? '<span class="model-label" title="' + esc(coord.agent + ' · ' + coord.model) + '">' + esc(coord.model) + '</span>'
+          : '<span class="model-label unrecorded">' + esc(coord.agent) + ' · ' + esc(t('modelUnrecorded')) + '</span>';
+        const coordActStr =
+          actionLabel(coord.last_action) +
+          (coord.last_action_detail ? ' · ' + coord.last_action_detail : '');
+
+        const exec = task.executor;
+        const codexModelText =
+          (exec.resolved_model || t('cliDefault')) +
+          (exec.reasoning_effort ? ' · ' + exec.reasoning_effort : '');
+        const exitReasonObj = exec.exit_reason || { code: 'normal', label_zh: '正常退出', label_en: 'Normal' };
+        const exitLabel = state.lang === 'zh' ? exitReasonObj.label_zh : exitReasonObj.label_en;
+        const exitCls = exitBadgeClass(exitReasonObj.code);
+
+        const liveMs =
+          isRunning && exec.started_at
+            ? Math.max(0, Date.now() - Date.parse(exec.started_at))
+            : exec.duration_ms;
+
+        const isConfirmingCancel = state.confirmCancelTask === task.task_id;
+        const isCanceling = state.cancelingTasks.has(task.task_id);
+        const cancelBtnHtml = isRunning
+          ? '<button type="button" class="danger-btn" data-action="cancel-task" data-task="' +
+            esc(task.task_id) +
+            '">' +
+            esc(isCanceling ? t('canceling') : isConfirmingCancel ? t('cancelConfirm') : t('cancelBtn')) +
+            '</button>'
+          : '';
+
+        let drawerHtml = '';
+        if (expanded && Array.isArray(task.runs) && task.runs.length > 0) {
+          const selectedRunId =
+            state.selectedRunByTask.get(task.task_id) || task.runs[task.runs.length - 1].run_id;
+          const activeDetail =
+            task.runs.find((r) => r.run_id === selectedRunId) || task.runs[task.runs.length - 1];
+
+          const revTabs = task.runs
+            .map((r) => {
+              const rActive = r.run_id === activeDetail.run_id;
+              const rDot =
+                r.execution_status === 'running'
+                  ? 'pulse'
+                  : r.execution_status === 'succeeded'
+                    ? 'ok'
+                    : r.execution_status === 'canceled'
+                      ? ''
+                      : 'err';
+              const rTitle = r.revision !== null ? 'rev-' + r.revision + ' · ' + r.run_id : r.run_id;
+              return (
+                '<button type="button" class="rev-pill' +
+                (rActive ? ' active' : '') +
+                '" data-action="select-run" data-task="' +
+                esc(task.task_id) +
+                '" data-run="' +
+                esc(r.run_id) +
+                '">' +
+                '<span class="dot ' +
+                rDot +
+                '"></span>' +
+                '<span class="mono">' +
+                esc(rTitle) +
+                '</span>' +
+                '<span style="opacity:0.75">(' +
+                esc(modeLabel(r.mode)) +
+                ')</span>' +
+                '</button>'
+              );
+            })
+            .join('');
+
+          const exB = execStatusBadge(activeDetail.execution_status);
+          const rpB = reportedStatusBadge(activeDetail.reported_status);
+          const vrB = verifyStatusBadge(activeDetail.verification_status);
+          const rExitText =
+            state.lang === 'zh'
+              ? activeDetail.exit_reason.label_zh
+              : activeDetail.exit_reason.label_en;
+          const rExitCls = exitBadgeClass(activeDetail.exit_reason.code);
+
+          const headlineSummary =
+            (activeDetail.execution_status === 'failed' || activeDetail.execution_status === 'timed_out'
+              ? rExitText
+              : exB.text) +
+            ' · ' +
+            rpB.text +
+            ' · ' +
+            vrB.text;
+
+          const usage = activeDetail.usage;
+          const usageHtml = usage
+            ? '<span class="mono" style="font-size:11px;color:var(--pb-fg-muted)">' +
+              esc(t('tokensLabel')) +
+              ': ' +
+              esc(t('tokIn')) +
+              ' ' +
+              formatCompactNum(usage.input_tokens || 0) +
+              (usage.cached_input_tokens
+                ? ' (' + esc(t('tokCache')) + ' ' + formatCompactNum(usage.cached_input_tokens) + ')'
+                : '') +
+              ' · ' +
+              esc(t('tokOut')) +
+              ' ' +
+              formatCompactNum(usage.output_tokens || 0) +
+              (usage.reasoning_output_tokens
+                ? ' (' + esc(t('tokReason')) + ' ' + formatCompactNum(usage.reasoning_output_tokens) + ')'
+                : '') +
+              '</span>'
+            : '';
+
+          const renderClaimsSection = (title, items) => {
+            if (!Array.isArray(items) || items.length === 0) return '';
+            const rows = items
+              .map(
+                (it) =>
+                  '<div class="claim-item">' +
+                  '<div>' +
+                  esc(it.claim) +
+                  '</div>' +
+                  (it.evidence
+                    ? '<span class="claim-ev" data-action="open-file" data-ws="' +
+                      esc(task.workspace) +
+                      '" data-path="' +
+                      esc(it.evidence) +
+                      '">' +
+                      esc(it.evidence) +
+                      '</span>'
+                    : '') +
+                  '</div>'
+              )
+              .join('');
+            return (
+              '<div class="detail-section">' +
+              '<div class="sec-title"><span>' +
+              esc(title) +
+              '</span><span class="mono">' +
+              items.length +
+              '</span></div>' +
+              '<div class="claim-list">' +
+              rows +
+              '</div></div>'
+            );
+          };
+
+          const filesHtml =
+            Array.isArray(activeDetail.delta_files) && activeDetail.delta_files.length > 0
+              ? '<div class="detail-section">' +
+                '<div class="sec-title"><span>' +
+                esc(t('secFiles')) +
+                '</span><span class="mono">' +
+                activeDetail.delta_files.length +
+                '</span></div>' +
+                '<div class="file-grid">' +
+                activeDetail.delta_files
+                  .map(
+                    (f) =>
+                      '<div class="file-row">' +
+                      '<span class="file-path" data-action="open-file" data-ws="' +
+                      esc(task.workspace) +
+                      '" data-path="' +
+                      esc(f.path) +
+                      '">[' +
+                      esc(f.status) +
+                      '] ' +
+                      esc(f.path) +
+                      '</span>' +
+                      '<span class="diff-stat"><span class="ins">+' +
+                      f.insertions +
+                      '</span><span class="del">-' +
+                      f.deletions +
+                      '</span></span></div>'
+                  )
+                  .join('') +
+                '</div></div>'
+              : '';
+
+          const verifyCmdsHtml =
+            Array.isArray(activeDetail.verify_results) && activeDetail.verify_results.length > 0
+              ? '<div class="detail-section">' +
+                '<div class="sec-title"><span>' +
+                esc(t('secVerifyCmds')) +
+                '</span></div>' +
+                '<div class="claim-list">' +
+                activeDetail.verify_results
+                  .map(
+                    (v) =>
+                      '<div class="claim-item">' +
+                      '<div class="mono" style="display:flex;justify-content:space-between;gap:8px">' +
+                      '<span>$ ' +
+                      esc((v.argv || []).join(' ')) +
+                      '</span>' +
+                      '<span class="chip ' +
+                      (v.exit_code === 0 && !v.timed_out ? 'ok' : 'err') +
+                      '">exit=' +
+                      esc(v.exit_code ?? 'null') +
+                      ' (' +
+                      formatDuration(v.duration_ms) +
+                      ')</span></div>' +
+                      (v.output_excerpt
+                        ? '<div class="mono" style="font-size:10.5px;color:var(--pb-fg-muted);white-space:pre-wrap">' +
+                          esc(v.output_excerpt) +
+                          '</div>'
+                        : '') +
+                      '</div>'
+                  )
+                  .join('') +
+                '</div></div>'
+              : '';
+
+          const eventsHtml =
+            Array.isArray(activeDetail.native_events) && activeDetail.native_events.length > 0
+              ? '<div class="detail-section">' +
+                '<div class="sec-title"><span>' +
+                esc(t('secEvents')) +
+                '</span></div>' +
+                '<div class="claim-list">' +
+                activeDetail.native_events
+                  .map(
+                    (ev) =>
+                      '<div class="claim-item mono" style="font-size:10.5px;color:var(--pb-fg-2)">' +
+                      esc(ev.message) +
+                      '</div>'
+                  )
+                  .join('') +
+                '</div></div>'
+              : '';
+
+          const rRoundDur =
+            activeDetail.execution_status === 'running' && activeDetail.started_at
+              ? Math.max(0, Date.now() - Date.parse(activeDetail.started_at))
+              : activeDetail.duration_ms;
+
+          drawerHtml =
+            '<div class="detail-drawer">' +
+            '<div class="rev-selector">' +
+            revTabs +
+            '</div>' +
+            '<div class="verdict-headline">' +
+            '<div class="verdict-summary-text">' +
+            '<span class="mono chip">' +
+            esc(activeDetail.revision !== null ? 'rev-' + activeDetail.revision : t('unpublishedRun')) +
+            '</span>' +
+            '<span>' +
+            esc(headlineSummary) +
+            '</span>' +
+            '</div>' +
+            usageHtml +
+            '</div>' +
+            '<div class="firewall-grid">' +
+            '<div class="fw-box">' +
+            '<div class="fw-label"><span>' +
+            esc(t('fwExecTitle')) +
+            '</span><span class="mono">' +
+            esc(formatDuration(rRoundDur)) +
+            '</span></div>' +
+            '<div class="fw-value"><span class="chip ' +
+            exB.cls +
+            '">' +
+            esc(exB.text) +
+            '</span><span class="chip ' +
+            rExitCls +
+            '">' +
+            esc(rExitText) +
+            '</span></div>' +
+            '<div class="fw-sub">exit_code: ' +
+            esc(activeDetail.exit_code === null ? '—' : activeDetail.exit_code) +
+            (activeDetail.thread_id ? ' · thread: ' + esc(activeDetail.thread_id.slice(0, 12)) + '…' : '') +
+            '</div></div>' +
+            '<div class="fw-box">' +
+            '<div class="fw-label"><span>' +
+            esc(t('fwReportTitle')) +
+            '</span></div>' +
+            '<div class="fw-value"><span class="chip ' +
+            rpB.cls +
+            '">' +
+            esc(rpB.text) +
+            '</span></div>' +
+            '<div class="fw-sub">blockers: ' +
+            (activeDetail.unverified_blockers ? activeDetail.unverified_blockers.length : 0) +
+            ' · counter: ' +
+            (activeDetail.unverified_counter_evidence ? activeDetail.unverified_counter_evidence.length : 0) +
+            '</div></div>' +
+            '<div class="fw-box">' +
+            '<div class="fw-label"><span>' +
+            esc(t('fwVerifyTitle')) +
+            '</span></div>' +
+            '<div class="fw-value"><span class="chip ' +
+            vrB.cls +
+            '">' +
+            esc(vrB.text) +
+            '</span></div>' +
+            '<div class="fw-sub">commands: ' +
+            (activeDetail.verify_results ? activeDetail.verify_results.length : 0) +
+            '</div></div>' +
+            '</div>' +
+            renderClaimsSection(t('secBlockers'), activeDetail.unverified_blockers) +
+            renderClaimsSection(t('secCounter'), activeDetail.unverified_counter_evidence) +
+            filesHtml +
+            verifyCmdsHtml +
+            eventsHtml +
+            '</div>';
+        }
+
+        return (
+          '<article class="' +
+          cardCls +
+          '" data-task-card="' +
+          esc(task.task_id) +
+          '">' +
+          '<div class="card-head" data-action="toggle-expand" data-task="' +
+          esc(task.task_id) +
+          '">' +
+          '<div class="head-left">' +
+          '<div class="head-dot-wrap"><span class="' +
+          dotCls +
+          '"></span></div>' +
+          '<div class="title-stack">' +
+          '<div class="task-objective" title="' +
+          esc(task.objective) +
+          '">' +
+          esc(task.objective) +
+          '</div>' +
+          '<div class="task-submeta">' +
+          '<span class="chip mono clickable" data-action="copy-id" data-copy="' +
+          esc(task.task_id) +
+          '">' +
+          esc(task.task_id) +
+          '</span>' +
+          '<span class="chip">' +
+          esc(task.workspace_name) +
+          ' · ' +
+          esc(task.workspace_mode === 'worktree' ? t('wsWorktree') : t('wsSnapshot')) +
+          '</span>' +
+          '<span class="chip mono">rev-' +
+          esc(task.current_revision) +
+          '</span>' +
+          '</div></div></div>' +
+          '<div class="head-right">' +
+          diffHtml +
+          '<span class="chev" aria-hidden="true">▾</span>' +
+          '</div></div>' +
+          '<div class="agent-lanes">' +
+          '<div class="agent-row">' +
+          '<div class="role-cell">' +
+          '<span class="role-tag coord">' +
+          esc(t('coordRole')) +
+          '</span>' +
+          coordModelHtml +
+          '</div>' +
+          '<div class="status-cell">' +
+          '<span class="chip ' +
+          bridge.cls +
+          '">' +
+          esc(bridge.text) +
+          '</span>' +
+          '<span class="event-ticker" title="' +
+          esc(coordActStr) +
+          '">' +
+          esc(coordActStr) +
+          '</span>' +
+          '</div>' +
+          '<div class="right-cell">' +
+          '<span class="timer">' +
+          esc(formatClock(coord.last_action_at)) +
+          '</span>' +
+          '</div></div>' +
+          '<div class="agent-row">' +
+          '<div class="role-cell">' +
+          '<span class="role-tag exec">' +
+          esc(t('execRole')) +
+          '</span>' +
+          '<span class="model-label mono" title="' +
+          esc(codexModelText) +
+          '">' +
+          esc(codexModelText) +
+          '</span>' +
+          '<span class="src-badge">' +
+          esc(modelSourceLabel(exec.model_source)) +
+          '</span>' +
+          '</div>' +
+          '<div class="status-cell">' +
+          '<span class="chip ' +
+          (isRunning ? 'info' : 'neutral') +
+          '">' +
+          esc(phaseLabel(exec.phase)) +
+          '</span>' +
+          renderPhaseStepper(exec.phase, isRunning) +
+          (exec.last_event
+            ? '<span class="event-ticker" title="' + esc(exec.last_event) + '">' + esc(exec.last_event) + '</span>'
+            : '') +
+          '</div>' +
+          '<div class="right-cell">' +
+          '<span class="timer' +
+          (isRunning ? ' live' : '') +
+          '" data-live-started="' +
+          esc(isRunning && exec.started_at ? exec.started_at : '') +
+          '">' +
+          esc(formatDuration(liveMs)) +
+          '</span>' +
+          '<span class="chip ' +
+          exitCls +
+          '">' +
+          esc(exitLabel) +
+          '</span>' +
+          cancelBtnHtml +
+          '</div></div>' +
+          '</div>' +
+          drawerHtml +
+          '</article>'
+        );
+      }
+
+      function notifyInlineHeight() {
+        const rootEl = document.getElementById('root');
+        if (!rootEl || !state.connected) return;
+        const h = Math.min(780, Math.max(140, Math.ceil((rootEl.scrollHeight || 220) + 8)));
+        sendRpcNotification('ui/notifications/size-changed', { height: h });
+      }
+
+      function renderBoard() {
+        const root = document.getElementById('root');
+        if (!root) return;
+
+        const b = state.board;
+        const summary = (b && b.summary) || {
+          total_tasks: 0,
+          running_tasks: 0,
+          idle_tasks: 0,
+          failed_or_interrupted_tasks: 0,
+        };
+        const anyRunning = summary.running_tasks > 0;
+        const defMod = b && b.default_codex_model;
+        const defModText =
+          (defMod && defMod.resolved_model ? defMod.resolved_model : t('cliDefault')) +
+          (defMod && defMod.reasoning_effort ? ' · ' + defMod.reasoning_effort : '');
+
+        let tasks = (b && Array.isArray(b.tasks) ? b.tasks : []).slice();
+        if (state.inlineFocusedOnly && state.initialFocusTaskId) {
+          const focused = tasks.filter((x) => x.task_id === state.initialFocusTaskId);
+          if (focused.length > 0) tasks = focused;
+        } else if (state.filter === 'running') {
+          tasks = tasks.filter((x) => x.state === 'running');
+        } else if (state.filter === 'attention') {
+          tasks = tasks.filter((x) => isTaskAttention(x));
+        }
+
+        const focusToggleBtn =
+          state.initialFocusTaskId && b && b.tasks && b.tasks.length > 1
+            ? '<button type="button" class="icon-btn" data-action="toggle-focus-scope">' +
+              esc(state.inlineFocusedOnly ? t('showAllTasks') + ' (' + b.tasks.length + ')' : t('focusSingleTask')) +
+              '</button>'
+            : '';
+
+        const filterBarHtml = state.inlineFocusedOnly
+          ? ''
+          : '<div class="filter-bar">' +
+            '<div class="filter-tabs">' +
+            '<button type="button" class="filter-tab' +
+            (state.filter === 'all' ? ' active' : '') +
+            '" data-action="set-filter" data-filter="all">' +
+            esc(t('filterAll')) +
+            '<span class="count-num">' +
+            summary.total_tasks +
+            '</span></button>' +
+            '<button type="button" class="filter-tab' +
+            (state.filter === 'running' ? ' active' : '') +
+            '" data-action="set-filter" data-filter="running">' +
+            esc(t('filterRunning')) +
+            '<span class="count-num">' +
+            summary.running_tasks +
+            '</span></button>' +
+            '<button type="button" class="filter-tab' +
+            (state.filter === 'attention' ? ' active' : '') +
+            '" data-action="set-filter" data-filter="attention">' +
+            esc(t('filterAttention')) +
+            '<span class="count-num">' +
+            summary.failed_or_interrupted_tasks +
+            '</span></button>' +
+            '</div></div>';
+
+        const listHtml =
+          tasks.length > 0
+            ? '<div class="task-list">' + tasks.map(renderTaskCard).join('') + '</div>'
+            : '<div class="empty-box"><div class="empty-title">' +
+              esc(b ? t('emptyTitle') : t('loadingTitle')) +
+              '</div><div>' +
+              esc(t('emptyDesc')) +
+              '</div></div>';
+
+        root.innerHTML =
+          '<header class="topbar">' +
+          '<div class="topbar-main">' +
+          '<div class="brand">' +
+          '<span class="brand-icon">PB</span>' +
+          '<span class="brand-title">' +
+          esc(t('boardTitle')) +
+          '</span>' +
+          '<span class="live-pill">' +
+          '<span class="dot ' +
+          (anyRunning ? 'pulse' : 'ok') +
+          '"></span>' +
+          '<span>' +
+          esc(anyRunning ? t('liveSync') : t('idleSync')) +
+          '</span>' +
+          '</span>' +
+          '</div>' +
+          '<div class="topbar-actions">' +
+          '<span class="default-model-chip mono" title="Default Codex CLI Model">' +
+          esc(t('defaultModelPrefix')) +
+          ' ' +
+          esc(defModText) +
+          '</span>' +
+          focusToggleBtn +
+          '<button type="button" class="icon-btn" data-action="refresh">' +
+          '↻ ' +
+          esc(t('refresh')) +
+          '</button>' +
+          '<div class="seg-group" role="group" aria-label="Language">' +
+          '<button type="button" class="seg-btn' +
+          (state.lang === 'zh' ? ' active' : '') +
+          '" data-action="set-lang" data-lang="zh">中文</button>' +
+          '<button type="button" class="seg-btn' +
+          (state.lang === 'en' ? ' active' : '') +
+          '" data-action="set-lang" data-lang="en">EN</button>' +
+          '</div>' +
+          '</div></div>' +
+          filterBarHtml +
+          '</header>' +
+          listHtml;
+
+        if (typeof requestAnimationFrame === 'function') {
+          requestAnimationFrame(notifyInlineHeight);
+        } else {
+          notifyInlineHeight();
+        }
+      }
+
+      document.addEventListener('click', async (ev) => {
+        const target = ev.target;
+        const btn = target && typeof target.closest === 'function' ? target.closest('[data-action]') : null;
+        if (!btn) return;
+        const action = btn.getAttribute('data-action');
+
+        if (action === 'set-lang') {
+          ev.stopPropagation();
+          state.lang = btn.getAttribute('data-lang') === 'en' ? 'en' : 'zh';
+          renderBoard();
+          return;
+        }
+
+        if (action === 'set-filter') {
+          ev.stopPropagation();
+          state.filter = btn.getAttribute('data-filter') || 'all';
+          renderBoard();
+          return;
+        }
+
+        if (action === 'toggle-focus-scope') {
+          ev.stopPropagation();
+          state.inlineFocusedOnly = !state.inlineFocusedOnly;
+          renderBoard();
+          return;
+        }
+
+        if (action === 'refresh') {
+          ev.stopPropagation();
+          await pollServerBoard();
+          return;
+        }
+
+        if (action === 'copy-id') {
+          ev.stopPropagation();
+          const val = btn.getAttribute('data-copy') || '';
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            try {
+              await navigator.clipboard.writeText(val);
+              showToast(t('copied') + val);
+            } catch {}
+          }
+          return;
+        }
+
+        if (action === 'open-file') {
+          ev.stopPropagation();
+          const ws = btn.getAttribute('data-ws') || '';
+          const p = btn.getAttribute('data-path') || '';
+          await openWorkspaceFileOrCopy(ws, p);
+          return;
+        }
+
+        if (action === 'select-run') {
+          ev.stopPropagation();
+          const tid = btn.getAttribute('data-task');
+          const rid = btn.getAttribute('data-run');
+          if (tid && rid) {
+            state.selectedRunByTask.set(tid, rid);
+            renderBoard();
+          }
+          return;
+        }
+
+        if (action === 'cancel-task') {
+          ev.stopPropagation();
+          const tid = btn.getAttribute('data-task');
+          if (!tid || state.cancelingTasks.has(tid)) return;
+          if (state.confirmCancelTask !== tid) {
+            state.confirmCancelTask = tid;
+            renderBoard();
+            setTimeout(() => {
+              if (state.confirmCancelTask === tid) {
+                state.confirmCancelTask = null;
+                renderBoard();
+              }
+            }, 3500);
+            return;
+          }
+          state.confirmCancelTask = null;
+          state.cancelingTasks.add(tid);
+          renderBoard();
+          try {
+            await callServerTool('passbox_cancel', { task_id: tid });
+            await pollServerBoard();
+          } catch {} finally {
+            state.cancelingTasks.delete(tid);
+            renderBoard();
+          }
+          return;
+        }
+
+        if (action === 'toggle-expand') {
+          const tid = btn.getAttribute('data-task');
+          if (!tid) return;
+          if (state.expandedTasks.has(tid)) state.expandedTasks.delete(tid);
+          else state.expandedTasks.add(tid);
+          renderBoard();
+        }
+      });
+
+      setInterval(() => {
+        const nodes = document.querySelectorAll('[data-live-started]');
+        for (const node of nodes) {
+          const iso = node.getAttribute('data-live-started');
+          if (!iso) continue;
+          const elapsed = Math.max(0, Date.now() - Date.parse(iso));
+          node.textContent = formatDuration(elapsed);
+        }
+      }, 1000);
+
+      async function schedulePollLoop() {
+        const anyRunning =
+          state.board && state.board.summary && state.board.summary.running_tasks > 0;
+        const waitMs = anyRunning ? 1500 : 4500;
+        await new Promise((r) => setTimeout(r, waitMs));
+        if (state.connected) {
+          await pollServerBoard();
+        }
+        void schedulePollLoop();
+      }
+
+      async function connectMcpApp() {
+        const versions = ['2026-01-26', '2025-11-25', '2025-06-18'];
+        for (const ver of versions) {
+          try {
+            const initRes = await sendRpcRequest('ui/initialize', {
+              protocolVersion: ver,
+              appInfo: { name: 'Passbox Status Board', version: '0.2.0' },
+              appCapabilities: {
+                availableDisplayModes: ['inline', 'fullscreen'],
+              },
+            });
+            state.connected = true;
+            if (initRes && initRes.hostContext) {
+              applyHostContext(initRes.hostContext);
+            }
+            sendRpcNotification('ui/notifications/initialized', {});
+            notifyInlineHeight();
+            setTimeout(() => {
+              if (!state.board) void pollServerBoard();
+            }, 150);
+            void schedulePollLoop();
+            return;
+          } catch {}
+        }
+      }
+
+      detectAmbientDarkTheme();
+      renderBoard();
+      void connectMcpApp();
+    })();
+  </script>
+</body>
+</html>
