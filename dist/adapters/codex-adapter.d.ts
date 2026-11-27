@@ -1,4 +1,4 @@
-import type { ExecutionStatus, ExecutorFinalReport, ExitReasonInfo, ModelSource, NativeHarnessEventClaim, ReasoningEffort, ReportedStatus, TokenUsageSummary } from '../types.js';
+import type { ExecutionStatus, ExecutorFinalReport, ExitReasonInfo, ModelSource, NativeHarnessEventClaim, ReasoningEffort, ReportedStatus, RunActivityItem, TokenUsageSummary } from '../types.js';
 export interface CodexAdapterRunInput {
     executionWorkspace: string;
     prompt: string;
@@ -20,6 +20,7 @@ export interface CodexAdapterRunInput {
         reasoningEffort: string | null;
     }) => void;
     onLiveEvent?: (summary: string) => void;
+    onActivity?: (activity: RunActivityItem) => void;
 }
 export interface CodexAdapterRunResult {
     executionStatus: Exclude<ExecutionStatus, 'running'>;
@@ -35,6 +36,7 @@ export interface CodexAdapterRunResult {
     lastEvent: string | null;
     usage: TokenUsageSummary | null;
     nativeEvents: NativeHarnessEventClaim[];
+    activities: RunActivityItem[];
     stderrSummary: string;
 }
 /**

@@ -7,42 +7,54 @@
   <style>
     :root {
       color-scheme: light dark;
-      --pb-bg: var(--color-background-primary, var(--background, #f7f8fa));
+      --pb-bg: var(--color-background-primary, var(--background, #f6f7f9));
       --pb-surface: var(--color-background-secondary, var(--card, #ffffff));
-      --pb-surface-subtle: var(--color-background-tertiary, var(--muted, #f0f2f5));
-      --pb-fg: var(--color-text-primary, var(--foreground, #181b20));
-      --pb-fg-2: var(--color-text-secondary, var(--secondary-foreground, #454d59));
-      --pb-fg-muted: var(--color-text-tertiary, var(--muted-foreground, #6e7785));
-      --pb-border: var(--color-border-primary, var(--card-border, rgba(15, 23, 42, 0.10)));
-      --pb-border-soft: var(--color-border-secondary, var(--border, rgba(15, 23, 42, 0.06)));
+      --pb-surface-subtle: var(--color-background-tertiary, var(--muted, #eef1f5));
+      --pb-surface-code: #f1f4f9;
+      --pb-fg: var(--color-text-primary, var(--foreground, #151921));
+      --pb-fg-2: var(--color-text-secondary, var(--secondary-foreground, #3f4756));
+      --pb-fg-muted: var(--color-text-tertiary, var(--muted-foreground, #6b7485));
+      --pb-border: var(--color-border-primary, var(--card-border, rgba(15, 23, 42, 0.11)));
+      --pb-border-soft: var(--color-border-secondary, var(--border, rgba(15, 23, 42, 0.065)));
       --pb-accent: var(--primary, #2563eb);
-      --pb-ok: #16a34a;
-      --pb-ok-bg: rgba(22, 163, 74, 0.11);
-      --pb-warn: #d97706;
+      --pb-coord: #4f46e5;
+      --pb-coord-bg: rgba(79, 70, 229, 0.10);
+      --pb-reason: #7c3aed;
+      --pb-reason-bg: rgba(124, 58, 237, 0.07);
+      --pb-ok: #15803d;
+      --pb-ok-bg: rgba(21, 128, 61, 0.11);
+      --pb-warn: #b45309;
       --pb-warn-bg: rgba(217, 119, 6, 0.12);
       --pb-err: #dc2626;
-      --pb-err-bg: rgba(220, 38, 38, 0.11);
+      --pb-err-bg: rgba(220, 38, 38, 0.10);
       --pb-info: #2563eb;
-      --pb-info-bg: rgba(37, 99, 235, 0.11);
+      --pb-info-bg: rgba(37, 99, 235, 0.10);
       --pb-neutral-bg: rgba(100, 116, 139, 0.11);
+      --pb-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04);
+      --pb-shadow-md: 0 2px 8px rgba(15, 23, 42, 0.06);
       --pb-font: var(--font-sans, var(--font-family, "Google Sans Flex", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif));
       --pb-mono: var(--editor-font-family, "Google Sans Code", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
       --r-sm: 5px;
       --r-md: 8px;
-      --r-lg: 10px;
+      --r-lg: 11px;
     }
 
     :root[data-theme="dark"] {
       color-scheme: dark;
-      --pb-bg: var(--color-background-primary, var(--background, #111317));
-      --pb-surface: var(--color-background-secondary, var(--card, #181b21));
-      --pb-surface-subtle: var(--color-background-tertiary, var(--muted, #20242c));
-      --pb-fg: var(--color-text-primary, var(--foreground, #eef0f4));
-      --pb-fg-2: var(--color-text-secondary, var(--secondary-foreground, #c2c8d4));
-      --pb-fg-muted: var(--color-text-tertiary, var(--muted-foreground, #8b94a5));
+      --pb-bg: var(--color-background-primary, var(--background, #0f1116));
+      --pb-surface: var(--color-background-secondary, var(--card, #171a21));
+      --pb-surface-subtle: var(--color-background-tertiary, var(--muted, #1f242e));
+      --pb-surface-code: #12151b;
+      --pb-fg: var(--color-text-primary, var(--foreground, #eef1f6));
+      --pb-fg-2: var(--color-text-secondary, var(--secondary-foreground, #c5ccd8));
+      --pb-fg-muted: var(--color-text-tertiary, var(--muted-foreground, #8a94a6));
       --pb-border: var(--color-border-primary, var(--card-border, rgba(255, 255, 255, 0.11)));
-      --pb-border-soft: var(--color-border-secondary, var(--border, rgba(255, 255, 255, 0.07)));
+      --pb-border-soft: var(--color-border-secondary, var(--border, rgba(255, 255, 255, 0.065)));
       --pb-accent: var(--primary, #60a5fa);
+      --pb-coord: #818cf8;
+      --pb-coord-bg: rgba(129, 140, 248, 0.14);
+      --pb-reason: #a78bfa;
+      --pb-reason-bg: rgba(167, 139, 250, 0.09);
       --pb-ok: #4ade80;
       --pb-ok-bg: rgba(74, 222, 128, 0.13);
       --pb-warn: #fbbf24;
@@ -52,6 +64,8 @@
       --pb-info: #60a5fa;
       --pb-info-bg: rgba(96, 165, 250, 0.14);
       --pb-neutral-bg: rgba(148, 163, 184, 0.14);
+      --pb-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.25);
+      --pb-shadow-md: 0 2px 10px rgba(0, 0, 0, 0.35);
     }
 
     * { box-sizing: border-box; }
@@ -60,14 +74,12 @@
       padding: 0;
       font-family: var(--pb-font);
       font-size: 13px;
-      line-height: 1.45;
+      line-height: 1.5;
       color: var(--pb-fg);
       background: var(--pb-bg);
       -webkit-font-smoothing: antialiased;
     }
-    body.mode-inline {
-      background: transparent;
-    }
+    body.mode-inline { background: transparent; }
     button {
       font: inherit;
       color: inherit;
@@ -80,13 +92,21 @@
       font-variant-numeric: tabular-nums;
     }
 
+    /* Subtle Scrollbars */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb {
+      background: var(--pb-border);
+      border-radius: 999px;
+    }
+    ::-webkit-scrollbar-thumb:hover { background: var(--pb-fg-muted); }
+
     .app-shell {
-      max-width: 920px;
+      max-width: none;
       margin: 0 auto;
-      padding: 0 12px 18px;
+      padding: 0 12px 14px;
     }
     body.mode-inline .app-shell {
-      max-width: none;
       padding: 4px 2px 6px;
     }
 
@@ -97,11 +117,11 @@
       z-index: 20;
       background: var(--pb-bg);
       border-bottom: 1px solid var(--pb-border);
-      padding: 10px 0 8px;
+      padding: 9px 0 8px;
       margin-bottom: 10px;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 7px;
     }
     body.mode-inline .topbar {
       position: static;
@@ -109,7 +129,6 @@
       padding: 2px 0 6px;
       margin-bottom: 8px;
     }
-
     .topbar-main {
       display: flex;
       align-items: center;
@@ -124,22 +143,22 @@
       min-width: 0;
     }
     .brand-icon {
-      width: 20px;
-      height: 20px;
-      border-radius: 5px;
-      background: var(--pb-info-bg);
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+      background: linear-gradient(135deg, var(--pb-info-bg), var(--pb-coord-bg));
       color: var(--pb-info);
       display: inline-flex;
       align-items: center;
       justify-content: center;
       font-weight: 700;
       font-size: 11px;
-      border: 1px solid rgba(37, 99, 235, 0.25);
+      border: 1px solid rgba(37, 99, 235, 0.28);
       flex: none;
     }
     .brand-title {
       font-size: 13.5px;
-      font-weight: 600;
+      font-weight: 650;
       letter-spacing: -0.01em;
       white-space: nowrap;
     }
@@ -148,11 +167,12 @@
       display: inline-flex;
       align-items: center;
       gap: 5px;
-      font-size: 11.5px;
-      color: var(--pb-fg-muted);
-      padding: 2px 7px;
+      font-size: 11px;
+      color: var(--pb-fg-2);
+      padding: 2px 8px;
       border-radius: 999px;
-      background: var(--pb-surface-subtle);
+      background: var(--pb-surface);
+      border: 1px solid var(--pb-border-soft);
     }
     .dot {
       width: 6px;
@@ -162,9 +182,7 @@
       position: relative;
       flex: none;
     }
-    .dot.pulse {
-      background: var(--pb-ok);
-    }
+    .dot.pulse { background: var(--pb-ok); }
     .dot.pulse::after {
       content: "";
       position: absolute;
@@ -191,9 +209,9 @@
     .default-model-chip {
       font-size: 11px;
       color: var(--pb-fg-2);
-      background: var(--pb-surface-subtle);
+      background: var(--pb-surface);
       border: 1px solid var(--pb-border-soft);
-      padding: 2px 7px;
+      padding: 2px 8px;
       border-radius: var(--r-sm);
       display: inline-flex;
       align-items: center;
@@ -218,23 +236,30 @@
     .seg-btn.active {
       background: var(--pb-surface);
       color: var(--pb-fg);
-      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+      box-shadow: var(--pb-shadow-sm);
     }
     .icon-btn {
       height: 24px;
-      padding: 0 7px;
+      padding: 0 8px;
       border-radius: 5px;
       font-size: 11.5px;
       color: var(--pb-fg-2);
-      background: var(--pb-surface-subtle);
+      background: var(--pb-surface);
       border: 1px solid var(--pb-border-soft);
       display: inline-flex;
       align-items: center;
       gap: 4px;
+      transition: border-color 0.12s ease, color 0.12s ease, background 0.12s ease;
     }
     .icon-btn:hover {
       border-color: var(--pb-border);
       color: var(--pb-fg);
+      background: var(--pb-surface-subtle);
+    }
+    .icon-btn[aria-pressed="true"] {
+      border-color: var(--pb-accent);
+      color: var(--pb-accent);
+      background: var(--pb-info-bg);
     }
 
     .filter-bar {
@@ -248,6 +273,7 @@
       display: flex;
       align-items: center;
       gap: 4px;
+      flex-wrap: wrap;
     }
     .filter-tab {
       font-size: 11.5px;
@@ -257,95 +283,63 @@
       display: inline-flex;
       align-items: center;
       gap: 5px;
+      border: 1px solid transparent;
     }
     .filter-tab:hover { color: var(--pb-fg); background: var(--pb-surface-subtle); }
     .filter-tab.active {
       color: var(--pb-fg);
       background: var(--pb-surface);
-      border: 1px solid var(--pb-border);
-      font-weight: 500;
+      border-color: var(--pb-border);
+      font-weight: 600;
+      box-shadow: var(--pb-shadow-sm);
     }
     .count-num {
       font-family: var(--pb-mono);
       font-size: 10.5px;
-      opacity: 0.85;
+      opacity: 0.8;
     }
 
-    /* Task Cards */
-    .task-list {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
+    /* Workbench Split Layout */
+    .workbench {
+      display: grid;
+      gap: 12px;
+      align-items: start;
     }
-    .task-card {
-      background: var(--pb-surface);
-      border: 1px solid var(--pb-border);
-      border-radius: var(--r-lg);
-      overflow: hidden;
-      transition: border-color 0.14s ease;
+    .master, .inspector {
+      min-width: 0;
+      overflow: auto;
+      scrollbar-gutter: stable;
     }
-    .task-card.is-running {
-      border-color: rgba(22, 163, 74, 0.45);
+    @media (min-width: 760px) {
+      body:not(.mode-inline) .workbench { grid-template-columns: clamp(300px, 30vw, 370px) minmax(0, 1fr); }
+      body:not(.mode-inline) .master,
+      body:not(.mode-inline) .inspector { max-height: max(300px, calc(100vh - 96px)); }
     }
-    .task-card.is-attention {
-      border-color: rgba(220, 38, 38, 0.38);
+    @media (max-width: 759.98px) {
+      .workbench .inspector { display: none; }
+      .workbench.show-detail .master { display: none; }
+      .workbench.show-detail .inspector { display: block; animation: enter-pane 140ms ease-out; }
+      .back-button { display: inline-flex; }
     }
+    body.mode-inline .workbench { display: block; }
+    body.mode-inline .master,
+    body.mode-inline .inspector { max-height: none; overflow: visible; }
+    body.mode-inline .workbench:not(.show-detail) .inspector,
+    body.mode-inline .workbench.show-detail .master { display: none; }
+    body.mode-inline .back-button { display: inline-flex; }
+    .back-button { display: none; margin-bottom: 6px; }
+    @keyframes enter-pane { from { opacity: .5; transform: translateX(6px); } to { opacity: 1; transform: none; } }
+    @media (prefers-reduced-motion: reduce) { .workbench.show-detail .inspector { animation: none; } }
 
-    .card-head {
-      padding: 9px 12px;
-      border-bottom: 1px solid var(--pb-border-soft);
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 10px;
-      cursor: pointer;
-      user-select: none;
-    }
-    .card-head:hover {
-      background: var(--pb-surface-subtle);
-    }
-    .head-left {
-      display: flex;
-      align-items: flex-start;
-      gap: 8px;
-      min-width: 0;
-      flex: 1;
-    }
-    .head-dot-wrap {
-      padding-top: 5px;
-      flex: none;
-    }
-    .title-stack {
-      min-width: 0;
-      flex: 1;
-    }
-    .task-objective {
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--pb-fg);
-      display: -webkit-box;
-      -webkit-line-clamp: 1;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-      word-break: break-word;
-    }
-    .task-submeta {
-      margin-top: 3px;
-      display: flex;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 6px;
-      font-size: 11px;
-      color: var(--pb-fg-muted);
-    }
+    /* Chips & Badges */
     .chip {
       display: inline-flex;
       align-items: center;
       gap: 4px;
       padding: 1px 6px;
       border-radius: 4px;
-      font-size: 11px;
-      line-height: 1.4;
+      font-size: 10.5px;
+      line-height: 1.45;
       background: var(--pb-surface-subtle);
       color: var(--pb-fg-2);
       white-space: nowrap;
@@ -354,84 +348,125 @@
       color: var(--pb-fg);
       outline: 1px solid var(--pb-border);
     }
-    .chip.ok { background: var(--pb-ok-bg); color: var(--pb-ok); font-weight: 500; }
-    .chip.warn { background: var(--pb-warn-bg); color: var(--pb-warn); font-weight: 500; }
-    .chip.err { background: var(--pb-err-bg); color: var(--pb-err); font-weight: 500; }
-    .chip.info { background: var(--pb-info-bg); color: var(--pb-info); font-weight: 500; }
+    .chip.ok { background: var(--pb-ok-bg); color: var(--pb-ok); font-weight: 600; }
+    .chip.warn { background: var(--pb-warn-bg); color: var(--pb-warn); font-weight: 600; }
+    .chip.err { background: var(--pb-err-bg); color: var(--pb-err); font-weight: 600; }
+    .chip.info { background: var(--pb-info-bg); color: var(--pb-info); font-weight: 600; }
     .chip.neutral { background: var(--pb-neutral-bg); color: var(--pb-fg-2); }
 
-    .head-right {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      flex: none;
-    }
     .diff-stat {
       font-family: var(--pb-mono);
       font-size: 11px;
       display: inline-flex;
+      align-items: center;
       gap: 4px;
+      font-weight: 600;
     }
     .ins { color: var(--pb-ok); }
     .del { color: var(--pb-err); }
-    .chev {
-      font-size: 11px;
-      color: var(--pb-fg-muted);
-      transition: transform 0.15s ease;
-      padding: 2px 4px;
-    }
-    .task-card.expanded .chev {
-      transform: rotate(180deg);
-    }
 
-    /* Dual-Agent Two-Row Lanes */
-    .agent-lanes {
-      padding: 8px 12px 10px;
+    /* Master Task Cards */
+    .task-list {
       display: flex;
       flex-direction: column;
-      gap: 6px;
-      position: relative;
+      gap: 8px;
+      padding-bottom: 4px;
+    }
+    .task-card {
+      background: var(--pb-surface);
+      border: 1px solid var(--pb-border);
+      border-radius: var(--r-lg);
+      overflow: hidden;
+      cursor: pointer;
+      box-shadow: var(--pb-shadow-sm);
+      transition: border-color 0.14s ease, box-shadow 0.14s ease;
+    }
+    .task-card:hover {
+      border-color: var(--pb-fg-muted);
+    }
+    .task-card.is-running {
+      border-color: rgba(21, 128, 61, 0.45);
+    }
+    .task-card.is-attention {
+      border-color: rgba(220, 38, 38, 0.42);
+    }
+    .task-card.selected {
+      border-color: var(--pb-accent);
+      box-shadow: inset 3px 0 0 var(--pb-accent), var(--pb-shadow-md);
+    }
+
+    .card-head {
+      padding: 9px 11px 7px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+      user-select: none;
+    }
+    .head-left {
+      display: flex;
+      align-items: flex-start;
+      gap: 7px;
+      min-width: 0;
+      flex: 1;
+    }
+    .head-dot-wrap {
+      padding-top: 5px;
+      flex: none;
+    }
+    .task-objective {
+      font-size: 12.5px;
+      font-weight: 650;
+      line-height: 1.38;
+      color: var(--pb-fg);
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      word-break: break-word;
+    }
+    .head-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 4px;
+      flex: none;
+    }
+
+    .agent-lanes {
+      padding: 0 10px 7px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
     }
     .agent-row {
       display: grid;
-      grid-template-columns: 185px 1fr auto;
+      grid-template-columns: minmax(0, 1fr) auto auto;
       align-items: center;
-      gap: 8px;
-      padding: 6px 8px;
-      border-radius: var(--r-md);
+      gap: 6px;
+      padding: 4px 7px;
+      border-radius: var(--r-sm);
       background: var(--pb-surface-subtle);
       border: 1px solid var(--pb-border-soft);
-    }
-    @media (max-width: 560px) {
-      .agent-row {
-        grid-template-columns: 1fr;
-        gap: 5px;
-      }
     }
     .role-cell {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 5px;
       min-width: 0;
     }
     .role-tag {
-      font-size: 10px;
-      font-weight: 600;
-      padding: 1px 5px;
+      font-size: 9.5px;
+      font-weight: 700;
+      padding: 1px 4.5px;
       border-radius: 3px;
       letter-spacing: 0.02em;
       flex: none;
     }
-    .role-tag.coord {
-      background: var(--pb-info-bg);
-      color: var(--pb-info);
-    }
-    .role-tag.exec {
-      background: var(--pb-ok-bg);
-      color: var(--pb-ok);
-    }
+    .role-tag.coord { background: var(--pb-coord-bg); color: var(--pb-coord); }
+    .role-tag.exec { background: var(--pb-ok-bg); color: var(--pb-ok); }
     .model-label {
-      font-size: 11.5px;
+      font-size: 11px;
       font-weight: 600;
       color: var(--pb-fg);
       overflow: hidden;
@@ -442,102 +477,128 @@
       font-weight: 400;
       color: var(--pb-fg-muted);
     }
-    .src-badge {
-      font-size: 10px;
-      color: var(--pb-fg-muted);
-      border: 1px solid var(--pb-border-soft);
-      background: var(--pb-surface);
-      padding: 0 4px;
-      border-radius: 3px;
-      flex: none;
-    }
-
     .status-cell {
       display: flex;
       align-items: center;
-      flex-wrap: wrap;
-      gap: 6px;
+      gap: 4px;
       min-width: 0;
     }
-    .event-ticker {
-      font-family: var(--pb-mono);
-      font-size: 11px;
-      color: var(--pb-fg-muted);
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      max-width: 290px;
-    }
-
-    .phase-steps {
-      display: inline-flex;
-      align-items: center;
-      gap: 3px;
-    }
-    .phase-step {
-      width: 5px;
-      height: 5px;
-      border-radius: 50%;
-      background: var(--pb-border);
-    }
-    .phase-step.done { background: var(--pb-ok); opacity: 0.65; }
-    .phase-step.current {
-      width: 12px;
-      border-radius: 4px;
-      background: var(--pb-info);
-    }
-
     .right-cell {
       display: flex;
       align-items: center;
       justify-content: flex-end;
-      gap: 6px;
-      flex-wrap: wrap;
+      gap: 5px;
     }
     .timer {
       font-family: var(--pb-mono);
-      font-size: 11.5px;
+      font-size: 11px;
       font-weight: 500;
       color: var(--pb-fg-2);
     }
     .timer.live {
       color: var(--pb-info);
-      font-weight: 600;
-    }
-    .danger-btn {
-      font-size: 11px;
-      padding: 2px 7px;
-      border-radius: 4px;
-      background: var(--pb-err-bg);
-      color: var(--pb-err);
-      border: 1px solid rgba(220, 38, 38, 0.3);
-      font-weight: 500;
+      font-weight: 650;
     }
 
-    /* Expandable Detail Drawer */
-    .detail-drawer {
-      border-top: 1px solid var(--pb-border);
-      background: var(--pb-bg);
-      padding: 10px 12px 12px;
-      display: none;
+    .card-ticker {
+      margin: 0 10px 7px;
+      padding: 3px 7px;
+      border-radius: var(--r-sm);
+      background: var(--pb-surface-code);
+      border: 1px solid var(--pb-border-soft);
+      font-family: var(--pb-mono);
+      font-size: 10.5px;
+      color: var(--pb-fg-2);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .card-foot {
+      padding: 5px 11px 7px;
+      border-top: 1px solid var(--pb-border-soft);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      font-size: 10.5px;
+      color: var(--pb-fg-muted);
+      flex-wrap: wrap;
+    }
+    .card-foot-meta {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      min-width: 0;
+      flex-wrap: wrap;
+    }
+
+    /* Inspector Pane */
+    .inspector {
+      background: var(--pb-surface);
+      border: 1px solid var(--pb-border);
+      border-radius: var(--r-lg);
+      box-shadow: var(--pb-shadow-sm);
+    }
+    .inspector-empty {
+      padding: 36px 20px;
+      text-align: center;
+      color: var(--pb-fg-muted);
+    }
+    .inspector-head {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: var(--pb-surface);
+      padding: 12px 14px 10px;
+      border-bottom: 1px solid var(--pb-border);
+      display: flex;
       flex-direction: column;
+      gap: 8px;
+    }
+    .inspector-head-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
       gap: 10px;
     }
-    .task-card.expanded .detail-drawer {
-      display: flex;
+    .inspector h2 {
+      margin: 0 0 4px;
+      font-size: 15.5px;
+      line-height: 1.35;
+      font-weight: 650;
+      overflow-wrap: anywhere;
     }
+    .inspector-meta {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--pb-fg-muted);
+    }
+    .danger-btn {
+      font-size: 11.5px;
+      padding: 4px 9px;
+      border-radius: 5px;
+      background: var(--pb-err-bg);
+      color: var(--pb-err);
+      border: 1px solid rgba(220, 38, 38, 0.32);
+      font-weight: 600;
+      flex: none;
+    }
+    .danger-btn:hover { background: rgba(220, 38, 38, 0.18); }
 
     .rev-selector {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 5px;
       flex-wrap: wrap;
     }
     .rev-pill {
-      font-size: 11.5px;
-      padding: 3px 9px;
+      font-size: 11px;
+      padding: 3px 8px;
       border-radius: 6px;
-      background: var(--pb-surface);
+      background: var(--pb-surface-subtle);
       border: 1px solid var(--pb-border-soft);
       color: var(--pb-fg-2);
       display: inline-flex;
@@ -546,54 +607,147 @@
     }
     .rev-pill:hover { border-color: var(--pb-border); color: var(--pb-fg); }
     .rev-pill.active {
+      background: var(--pb-surface);
       border-color: var(--pb-accent);
       color: var(--pb-fg);
       font-weight: 600;
+      box-shadow: var(--pb-shadow-sm);
     }
 
-    /* Three-Way Firewall Grid */
-    .verdict-headline {
-      padding: 7px 10px;
-      border-radius: var(--r-md);
+    .detail-drawer {
+      background: var(--pb-bg);
+      padding: 12px 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    /* Hero Summary Band */
+    .hero-band {
       background: var(--pb-surface);
-      border: 1px solid var(--pb-border-soft);
+      border: 1px solid var(--pb-border);
+      border-radius: var(--r-md);
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+    }
+    .handoff-bar {
       display: flex;
       align-items: center;
       justify-content: space-between;
       flex-wrap: wrap;
       gap: 8px;
-      font-size: 12px;
+      font-size: 11.5px;
     }
-    .verdict-summary-text {
-      font-weight: 600;
+    .handoff-route {
       display: flex;
       align-items: center;
-      gap: 6px;
       flex-wrap: wrap;
+      gap: 6px;
     }
+    .handoff-node {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: var(--pb-surface-subtle);
+      border: 1px solid var(--pb-border-soft);
+    }
+    .handoff-arrow {
+      color: var(--pb-fg-muted);
+      font-weight: 700;
+    }
+    .src-badge {
+      font-size: 10px;
+      color: var(--pb-fg-muted);
+      border: 1px solid var(--pb-border-soft);
+      background: var(--pb-surface);
+      padding: 0 4px;
+      border-radius: 3px;
+    }
+
+    /* Labeled Phase Progress Bar */
+    .phase-track {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 4px;
+      padding: 6px 8px;
+      border-radius: var(--r-sm);
+      background: var(--pb-surface-subtle);
+    }
+    .phase-node {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      color: var(--pb-fg-muted);
+      min-width: 0;
+    }
+    .phase-node-dot {
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9.5px;
+      font-weight: 700;
+      background: var(--pb-surface);
+      border: 1px solid var(--pb-border);
+      flex: none;
+    }
+    .phase-node.done { color: var(--pb-ok); }
+    .phase-node.done .phase-node-dot {
+      background: var(--pb-ok-bg);
+      border-color: var(--pb-ok);
+      color: var(--pb-ok);
+    }
+    .phase-node.current { color: var(--pb-info); font-weight: 650; }
+    .phase-node.current .phase-node-dot {
+      background: var(--pb-info);
+      border-color: var(--pb-info);
+      color: #ffffff;
+      box-shadow: 0 0 0 3px var(--pb-info-bg);
+    }
+    .phase-node-text {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* Three-Way Firewall Strip */
     .firewall-grid {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 8px;
     }
-    @media (max-width: 540px) {
+    @media (max-width: 560px) {
       .firewall-grid { grid-template-columns: 1fr; }
+      .phase-track { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     }
     .fw-box {
-      background: var(--pb-surface);
+      background: var(--pb-surface-subtle);
       border: 1px solid var(--pb-border-soft);
+      border-top: 2.5px solid var(--pb-border);
       border-radius: var(--r-md);
       padding: 7px 9px;
       display: flex;
       flex-direction: column;
       gap: 4px;
     }
+    .fw-box.tone-ok { border-top-color: var(--pb-ok); }
+    .fw-box.tone-info { border-top-color: var(--pb-info); }
+    .fw-box.tone-warn { border-top-color: var(--pb-warn); }
+    .fw-box.tone-err { border-top-color: var(--pb-err); }
     .fw-label {
       font-size: 10.5px;
       color: var(--pb-fg-muted);
       display: flex;
       align-items: center;
       justify-content: space-between;
+      gap: 6px;
     }
     .fw-value {
       font-size: 12px;
@@ -609,68 +763,265 @@
       font-family: var(--pb-mono);
     }
 
+    /* Token Efficiency Bar */
+    .token-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding-top: 6px;
+      border-top: 1px solid var(--pb-border-soft);
+      font-size: 11px;
+      color: var(--pb-fg-muted);
+    }
+    .token-metrics {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
     /* Sections inside Detail */
     .detail-section {
       background: var(--pb-surface);
       border: 1px solid var(--pb-border-soft);
       border-radius: var(--r-md);
-      padding: 8px 10px;
+      padding: 9px 11px;
     }
     .sec-title {
-      font-size: 11px;
-      font-weight: 600;
+      font-size: 11.5px;
+      font-weight: 650;
       color: var(--pb-fg-2);
-      margin-bottom: 6px;
+      margin-bottom: 7px;
       display: flex;
       align-items: center;
       justify-content: space-between;
+      gap: 8px;
     }
     .claim-list {
       display: flex;
       flex-direction: column;
-      gap: 5px;
+      gap: 6px;
     }
     .claim-item {
-      font-size: 11.5px;
-      padding: 5px 7px;
-      border-radius: 5px;
+      font-size: 12.5px;
+      line-height: 1.55;
+      padding: 7px 9px;
+      border-radius: 6px;
       background: var(--pb-surface-subtle);
+      border-left: 3px solid var(--pb-border);
       display: flex;
       flex-direction: column;
-      gap: 3px;
+      gap: 4px;
+      overflow-wrap: anywhere;
+    }
+    .claim-item.is-blocker { border-left-color: var(--pb-err); }
+    .claim-item.is-counter { border-left-color: var(--pb-info); }
+    .claim-head {
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+    }
+    .claim-idx {
+      font-family: var(--pb-mono);
+      font-size: 10.5px;
+      font-weight: 700;
+      color: var(--pb-fg-muted);
+      padding-top: 2px;
+      flex: none;
     }
     .claim-ev {
       font-family: var(--pb-mono);
-      font-size: 10.5px;
-      color: var(--pb-info);
-      cursor: pointer;
+      font-size: 11px;
+      color: var(--pb-fg-2);
       align-self: flex-start;
+      overflow-wrap: anywhere;
     }
-    .claim-ev:hover { text-decoration: underline; }
+    button.claim-ev, button.file-path {
+      color: var(--pb-info);
+      text-align: left;
+      min-width: 0;
+    }
+    button.claim-ev:hover, button.file-path:hover { text-decoration: underline; }
 
+    /* Changed Files */
     .file-grid {
       display: flex;
       flex-direction: column;
       gap: 3px;
     }
     .file-row {
-      display: flex;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto auto;
       align-items: center;
-      justify-content: space-between;
       gap: 8px;
       font-family: var(--pb-mono);
       font-size: 11px;
-      padding: 3px 6px;
-      border-radius: 4px;
+      padding: 4px 7px;
+      border-radius: 5px;
     }
     .file-row:hover { background: var(--pb-surface-subtle); }
     .file-path {
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
-      cursor: pointer;
     }
-    .file-path:hover { color: var(--pb-info); text-decoration: underline; }
+    .diff-bar {
+      width: 44px;
+      height: 5px;
+      border-radius: 999px;
+      background: var(--pb-surface-subtle);
+      overflow: hidden;
+      display: inline-flex;
+    }
+    .diff-bar-ins { background: var(--pb-ok); height: 100%; }
+    .diff-bar-del { background: var(--pb-err); height: 100%; }
+
+    /* Live Process Stream */
+    .stream-heading {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 7px;
+    }
+    .stream-filters {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-bottom: 7px;
+    }
+    .stream-list {
+      max-height: 46vh;
+      overflow: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .stream-row {
+      border: 1px solid var(--pb-border-soft);
+      border-left: 3px solid var(--pb-border);
+      border-radius: 6px;
+      padding: 7px 9px;
+      background: var(--pb-surface-subtle);
+      overflow-wrap: anywhere;
+    }
+    .stream-row.kind-command_execution,
+    .stream-row.kind-verify { border-left-color: var(--pb-info); }
+    .stream-row.kind-reasoning {
+      border-left-color: var(--pb-reason);
+      background: var(--pb-reason-bg);
+    }
+    .stream-row.kind-file_change { border-left-color: var(--pb-ok); }
+    .stream-row.kind-error {
+      border-left-color: var(--pb-err);
+      background: var(--pb-err-bg);
+    }
+    .stream-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+      font-size: 11px;
+      color: var(--pb-fg-muted);
+      margin-bottom: 4px;
+    }
+    .stream-prose {
+      font-size: 12px;
+      line-height: 1.55;
+      color: var(--pb-fg);
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+    .inspector pre {
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      font: 11.5px/1.5 var(--pb-mono);
+      margin: 4px 0 0;
+      padding: 6px 8px;
+      border-radius: 5px;
+      background: var(--pb-surface-code);
+      border: 1px solid var(--pb-border-soft);
+      user-select: text;
+    }
+    .inspector summary {
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 11.5px;
+      color: var(--pb-fg-2);
+      list-style: none;
+    }
+    .inspector summary::-webkit-details-marker { display: none; }
+    .disclosure-arrow {
+      display: inline-block;
+      width: 12px;
+      font-size: 11px;
+      color: var(--pb-fg-muted);
+      transition: transform 0.14s ease;
+      flex: none;
+    }
+    details[open] > summary .disclosure-arrow {
+      transform: rotate(90deg);
+      color: var(--pb-fg);
+    }
+    .prompt-summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .prompt-summary:hover, details > summary.sec-title:hover { color: var(--pb-fg); }
+    .prompt-controls {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .prompt-body {
+      max-height: 200px;
+      overflow: auto;
+      overscroll-behavior: contain;
+      margin-top: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+    .prompt-body.is-expanded { max-height: 60vh; }
+    body.mode-inline .prompt-body { max-height: 280px; }
+    body.mode-inline .prompt-body.is-expanded { max-height: 60vh; }
+    body.mode-inline .stream-list { max-height: 360px; }
+    .prompt-body pre { user-select: text; }
+    .jump-bar {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    /* Activities */
+    .activity-list {
+      max-height: 180px;
+      overflow: auto;
+      overscroll-behavior: contain;
+      margin-top: 6px;
+    }
+    .activity-row {
+      display: grid;
+      grid-template-columns: auto auto minmax(0, 1fr) auto;
+      align-items: baseline;
+      gap: 6px;
+      font-size: 11px;
+      padding: 3px 0;
+      border-bottom: 1px solid var(--pb-border-soft);
+    }
+    .activity-row:last-child { border-bottom: 0; }
+    .activity-label { overflow-wrap: anywhere; }
+    .activity-kind, .activity-time, .activity-omitted { color: var(--pb-fg-muted); }
+    .activity-omitted { font-size: 11px; margin: 4px 0; }
 
     .empty-box {
       padding: 28px 16px;
@@ -690,7 +1041,7 @@
       position: fixed;
       bottom: 12px;
       right: 12px;
-      padding: 5px 10px;
+      padding: 6px 11px;
       border-radius: 6px;
       background: var(--pb-fg);
       color: var(--pb-bg);
@@ -749,6 +1100,7 @@
           phaseResponding: '生成报告',
           phaseCompleted: '已完成',
           phaseIdle: '空闲',
+          phaseShort: { starting: '启动', investigating: '检索', editing: '修改', verifying: '验证', responding: '报告' },
           modeInitial: '首次委托',
           modeResume: '续接会话',
           modeReset: '重置上下文',
@@ -780,10 +1132,29 @@
           secCounter: '反证 / 已核实结论 (待核验)',
           secFiles: '本轮文件变更',
           secVerifyCmds: '独立验证命令结果',
+          back: '← 返回任务列表', prompt: '完整提示词', contract: '任务约定', guidance: '本轮引导',
+          envelope: 'Codex 提示词信封', objective: '任务目标', copy: '复制', stream: '实时执行过程',
+          expandFull: '展开全文', collapseFull: '收起',
+          jumpPrompt: '提示词', jumpClaims: '问题/结论', jumpFiles: '文件变更', jumpStream: '实时过程', jumpActivities: '活动',
+          follow: '自动跟随最新', waiting: '正在加载详情…', truncated: '已截断',
+          selectTask: '选择任务查看详情', output: '输出', args: '参数', result: '结果',
+          streamAll: '全部', streamCmd: '命令/验证', streamReason: '推理', streamFile: '文件', streamTool: '工具', streamErr: '异常',
+          streamEmptyFiltered: '当前筛选下暂无事件',
+          eventKinds: { reasoning: '推理摘要', command_execution: '命令', mcp_tool_call: 'MCP 工具',
+            collab_tool_call: '协同工具', file_change: '文件变更', web_search: '搜索', agent_message: 'Codex 消息',
+            verify: '独立验证', turn: '轮次', phase: '阶段', error: '错误' },
+          contractKeys: { workspace_mode: '工作区模式', expected_files: '预期文件', invariants: '约束', acceptance: '验收条件', verify_commands: '验证命令' },
+          secActivities: '运行活动',
+          omittedActivities: (count) => '已省略 ' + count + ' 条较早活动',
+          activityKinds: { phase: '阶段', command: '命令', tool: '工具', file_change: '文件', turn: '轮次', notice: '通知' },
+          activityStatuses: { started: '已开始', completed: '已完成', failed: '失败', declined: '已拒绝', canceled: '已取消', info: '信息' },
+          fileOpenFailed: '无法打开文件或复制路径',
           secEvents: '原生 Harness 事件与诊断',
           tokensLabel: 'Token 用量',
           tokIn: '输入',
           tokCache: '缓存',
+          tokNew: '新增',
+          tokHitRate: '命中',
           tokOut: '输出',
           tokReason: '推理',
           emptyTitle: '暂无 Passbox 委托任务',
@@ -831,6 +1202,7 @@
           phaseResponding: 'Responding',
           phaseCompleted: 'Completed',
           phaseIdle: 'Idle',
+          phaseShort: { starting: 'Start', investigating: 'Explore', editing: 'Edit', verifying: 'Verify', responding: 'Report' },
           modeInitial: 'initial',
           modeResume: 'resume',
           modeReset: 'reset_context',
@@ -862,10 +1234,29 @@
           secCounter: 'Counter-Evidence / Confirmed Notes (Unverified)',
           secFiles: 'Changed Files in Round',
           secVerifyCmds: 'Independent Verification Commands',
+          back: '← Back to tasks', prompt: 'Prompt & guidance', contract: 'Contract', guidance: 'Run guidance',
+          envelope: 'Codex prompt envelope', objective: 'Objective', copy: 'Copy', stream: 'Live process stream',
+          expandFull: 'Expand', collapseFull: 'Collapse',
+          jumpPrompt: 'Prompt', jumpClaims: 'Findings', jumpFiles: 'Files', jumpStream: 'Stream', jumpActivities: 'Activity',
+          follow: 'Follow tail', waiting: 'Loading detail…', truncated: 'Truncated',
+          selectTask: 'Select a task to inspect', output: 'Output', args: 'Arguments', result: 'Result',
+          streamAll: 'All', streamCmd: 'Commands', streamReason: 'Reasoning', streamFile: 'Files', streamTool: 'Tools', streamErr: 'Errors',
+          streamEmptyFiltered: 'No events matching this filter',
+          eventKinds: { reasoning: 'Reasoning summary', command_execution: 'Command', mcp_tool_call: 'MCP tool',
+            collab_tool_call: 'Collaboration', file_change: 'File change', web_search: 'Search', agent_message: 'Codex message',
+            verify: 'Verification', turn: 'Turn', phase: 'Phase', error: 'Error' },
+          contractKeys: { workspace_mode: 'Workspace mode', expected_files: 'Expected files', invariants: 'Invariants', acceptance: 'Acceptance', verify_commands: 'Verification commands' },
+          secActivities: 'Run Activity',
+          omittedActivities: (count) => count + ' earlier events omitted',
+          activityKinds: { phase: 'Phase', command: 'Command', tool: 'Tool', file_change: 'File', turn: 'Turn', notice: 'Notice' },
+          activityStatuses: { started: 'Started', completed: 'Completed', failed: 'Failed', declined: 'Declined', canceled: 'Canceled', info: 'Info' },
+          fileOpenFailed: 'Could not open the file or copy its path',
           secEvents: 'Native Harness Events & Diagnostics',
           tokensLabel: 'Tokens',
           tokIn: 'in',
           tokCache: 'cached',
+          tokNew: 'new',
+          tokHitRate: 'hit',
           tokOut: 'out',
           tokReason: 'reasoning',
           emptyTitle: 'No Passbox tasks yet',
@@ -879,16 +1270,33 @@
       const state = {
         lang: 'zh',
         filter: 'all',
+        streamFilter: 'all',
         inlineFocusedOnly: false,
         initialFocusTaskId: null,
         board: null,
-        expandedTasks: new Set(),
+        selectedTaskId: null,
+        showDetail: false,
+        followTail: true,
+        envelopes: new Set(),
+        promptExpanded: new Set(),
+        disclosure: new Map(),
+        scroll: new Map(),
+        pollSequence: 0,
+        pollTimer: null,
         selectedRunByTask: new Map(),
+        activityScrollByRun: new Map(),
         confirmCancelTask: null,
         cancelingTasks: new Set(),
         displayMode: 'pane',
+        inlineMaxHeight: 780,
+        lastNotifiedHeight: 0,
+        lastRenderedHtml: '',
+        pointerDown: false,
+        lastUserScrollMs: 0,
+        restoringScroll: false,
+        pendingPollRender: false,
+        flushTimer: null,
         connected: false,
-        pollInFlight: false,
         lastUpdatedMs: 0,
       };
 
@@ -979,6 +1387,8 @@
         }
         if (ctx.containerDimensions && typeof ctx.containerDimensions.maxHeight === 'number') {
           state.displayMode = 'inline';
+          state.inlineMaxHeight = Math.min(780, Math.max(320, Math.floor(ctx.containerDimensions.maxHeight)));
+          state.lastNotifiedHeight = 0;
           document.body.classList.add('mode-inline');
         }
       }
@@ -990,21 +1400,27 @@
         }
       }
 
-      function ingestToolPayload(payload) {
+      function detailVisible() {
+        const narrow = typeof window.innerWidth === 'number' && window.innerWidth < 760;
+        return state.showDetail || (!narrow && state.displayMode !== 'inline');
+      }
+
+      function ingestToolPayload(payload, fromPoll) {
         if (!payload || typeof payload !== 'object') return;
         const sc = payload.structuredContent;
         if (sc && Array.isArray(sc.tasks)) {
           const firstArrival = !state.board;
           state.board = sc;
           state.lastUpdatedMs = Date.now();
-          if (sc.focus_task_id && !state.initialFocusTaskId) {
+          if (firstArrival && sc.focus_task_id && !state.initialFocusTaskId) {
             state.initialFocusTaskId = sc.focus_task_id;
           }
-          if (firstArrival) {
-            const autoExpand = state.initialFocusTaskId || (sc.tasks[0] && sc.tasks[0].task_id);
-            if (autoExpand) state.expandedTasks.add(autoExpand);
+          if (firstArrival) state.selectedTaskId = state.initialFocusTaskId || sc.tasks[0]?.task_id;
+          schedulePollLoop();
+          renderBoard({ fromPoll: Boolean(fromPoll) });
+          if (firstArrival && state.selectedTaskId && !sc.task_detail && detailVisible() && state.connected) {
+            void pollServerBoard();
           }
-          renderBoard();
           return;
         }
         const textBlock = Array.isArray(payload.content)
@@ -1015,7 +1431,7 @@
             const parsed = JSON.parse(textBlock.text);
             if (parsed && typeof parsed.task_id === 'string') {
               state.initialFocusTaskId = parsed.task_id;
-              state.expandedTasks.add(parsed.task_id);
+              state.selectedTaskId = parsed.task_id;
               if (state.displayMode === 'inline') {
                 state.inlineFocusedOnly = true;
               }
@@ -1033,7 +1449,9 @@
           const waiter = pendingRpc.get(msg.id);
           if (waiter) {
             pendingRpc.delete(msg.id);
-            if (msg.error) waiter.reject(new Error(msg.error.message || 'RPC error'));
+            if (msg.error) waiter.reject(Object.assign(new Error(msg.error.message || 'RPC error'), {
+              code: msg.error.code,
+            }));
             else waiter.resolve(msg.result);
           }
           return;
@@ -1048,7 +1466,7 @@
           const args = msg.params && msg.params.arguments;
           if (args && typeof args.task_id === 'string' && args.task_id) {
             state.initialFocusTaskId = args.task_id;
-            state.expandedTasks.add(args.task_id);
+            state.selectedTaskId = args.task_id;
           }
           return;
         }
@@ -1069,53 +1487,80 @@
       }
 
       async function pollServerBoard() {
-        if (!state.connected || state.pollInFlight || document.hidden) return;
-        state.pollInFlight = true;
+        if (!state.connected) return;
+        clearTimeout(state.pollTimer);
+        if (document.hidden) { schedulePollLoop(); return; }
+        const sequence = ++state.pollSequence;
+        const selected = state.selectedTaskId;
+        const runId = selected && state.selectedRunByTask.get(selected);
+        const detail = detailVisible();
         try {
           const res = await callServerTool('passbox_status', {
             include_board: true,
-            ...(state.initialFocusTaskId ? { task_id: state.initialFocusTaskId } : {}),
+            include_detail: detail,
+            ...(selected ? { task_id: selected } : {}),
+            ...(detail && runId ? { run_id: runId } : {}),
           });
-          if (res) ingestToolPayload(res);
+          if (res && sequence === state.pollSequence) ingestToolPayload(res, true);
         } catch {} finally {
-          state.pollInFlight = false;
+          if (sequence === state.pollSequence) schedulePollLoop();
         }
       }
 
-      function toFileUri(workspace, rawPathWithLine) {
-        const rawStr = String(rawPathWithLine || '').trim();
-        const colonIdx = rawStr.indexOf(':', 2);
-        const cleanRel = (colonIdx > 0 ? rawStr.slice(0, colonIdx) : rawStr).trim();
-        const normRel = cleanRel.split('\\').join('/');
-        const isAbs = normRel.startsWith('/') || (normRel.length >= 3 && normRel[1] === ':' && normRel[2] === '/');
-        let full = normRel;
-        if (!isAbs && workspace) {
-          let normWs = String(workspace).split('\\').join('/');
-          while (normWs.endsWith('/')) normWs = normWs.slice(0, -1);
-          full = normWs + '/' + normRel;
-        }
-        while (full.startsWith('/')) full = full.slice(1);
-        return 'file:///' + full;
-      }
-
-      async function openWorkspaceFileOrCopy(workspace, rawPathWithLine) {
-        if (!rawPathWithLine) return;
-        const fileUri = toFileUri(workspace, rawPathWithLine);
+      async function openWorkspaceFileOrCopy(uri, uriWithLine, raw) {
+        if (!uri) return;
         if (state.connected) {
-          try {
-            const res = await sendRpcRequest('com.google.antigravity/toggle-aux-pane', {
-              tabType: 'fileView',
-              uri: fileUri,
-            });
-            if (!res || !res.isError) return;
-          } catch {}
+          for (const target of uriWithLine && uriWithLine !== uri ? [uriWithLine, uri] : [uri]) {
+            try {
+              const res = await sendRpcRequest('com.google.antigravity/toggle-aux-pane', {
+                tabType: 'fileView',
+                uri: target,
+              });
+              if (res && res.isError) continue;
+              if (res && res.error) {
+                if (res.error.code === -32601) break;
+                continue;
+              }
+              return;
+            } catch (err) {
+              if (err.code === -32601) break;
+            }
+          }
         }
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          try {
-            await navigator.clipboard.writeText(rawPathWithLine);
-            showToast(t('copied') + rawPathWithLine);
-          } catch {}
+        try {
+          await navigator.clipboard.writeText(raw);
+          showToast(t('copied') + raw);
+        } catch {
+          showToast(t('fileOpenFailed'));
         }
+      }
+
+      function renderFileReference(cssClass, display, raw, link) {
+        if (!link || !link.uri) return '<span class="' + cssClass + '">' + esc(display) + '</span>';
+        return '<button type="button" class="' + cssClass + '" data-action="open-file" data-uri="' +
+          esc(link.uri) + '" data-uri-line="' + esc(link.uri_with_line) + '" data-raw="' + esc(raw) +
+          '">' + esc(display) + '</button>';
+      }
+
+      function renderActivities(taskId, run, defaultOpen) {
+        const items = run.activities || [];
+        const omitted = run.activities_omitted_count || 0;
+        if (!items.length && !omitted) return '';
+        const kinds = t('activityKinds');
+        const statuses = t('activityStatuses');
+        const badgeClasses = { started: 'info', completed: 'ok', failed: 'err', declined: 'warn', canceled: 'warn', info: 'neutral' };
+        const discKey = taskId + '/' + run.run_id + '/activities';
+        const isOpen = state.disclosure.has(discKey) ? state.disclosure.get(discKey) : defaultOpen;
+        return '<details' + (isOpen ? ' open' : '') + ' class="detail-section" data-section-id="activities" data-disclosure="' + esc(discKey) + '">' +
+          '<summary class="sec-title" style="margin-bottom:0"><span><span class="disclosure-arrow" aria-hidden="true">▸</span> ' + esc(t('secActivities')) + '</span><span class="mono chip neutral">' + items.length + '</span></summary>' +
+          (omitted ? '<div class="activity-omitted">' + esc(t('omittedActivities')(omitted)) + '</div>' : '') +
+          '<div class="activity-list" data-activity-run="' + esc(taskId + '/' + run.run_id) + '">' +
+          items.map((item) => '<div class="activity-row">' +
+            '<time class="mono activity-time" datetime="' + esc(item.at) + '">' + esc(formatClock(item.at)) + '</time>' +
+            '<span class="activity-kind">' + esc(kinds[item.kind]) + '</span>' +
+            '<span class="activity-label">' + esc(item.kind === 'phase' ? phaseLabel(item.label) : item.label) + '</span>' +
+            '<span class="chip ' + esc(badgeClasses[item.status]) + '">' + esc(statuses[item.status]) + '</span></div>'
+          ).join('') + '</div></details>';
       }
 
       // --- UI Helpers ---
@@ -1163,15 +1608,18 @@
         return phase || '';
       }
 
-      function renderPhaseStepper(phase, isRunning) {
+      function renderLabeledPhaseTrack(phase, isRunning) {
+        if (!isRunning) return '';
         const order = ['starting', 'investigating', 'editing', 'verifying', 'responding'];
         const idx = order.indexOf(phase);
-        if (!isRunning) return '';
-        const dots = order.map((p, i) => {
-          const cls = i < idx ? 'phase-step done' : i === idx ? 'phase-step current' : 'phase-step';
-          return '<span class="' + cls + '"></span>';
-        });
-        return '<span class="phase-steps" aria-hidden="true">' + dots.join('') + '</span>';
+        const labels = t('phaseShort');
+        return '<div class="phase-track">' + order.map((p, i) => {
+          const st = i < idx ? 'done' : i === idx ? 'current' : '';
+          const glyph = i < idx ? '✓' : String(i + 1);
+          return '<div class="phase-node ' + st + '">' +
+            '<span class="phase-node-dot">' + glyph + '</span>' +
+            '<span class="phase-node-text">' + esc(labels[p] || phaseLabel(p)) + '</span></div>';
+        }).join('') + '</div>';
       }
 
       function exitBadgeClass(code) {
@@ -1219,16 +1667,355 @@
         return st === 'failed' || st === 'timed_out' || st === 'canceled';
       }
 
+      function matchesStreamFilter(entry, filter) {
+        if (filter === 'all') return true;
+        if (filter === 'command') return entry.kind === 'command_execution' || entry.kind === 'verify';
+        if (filter === 'reasoning') return entry.kind === 'reasoning' || entry.kind === 'agent_message';
+        if (filter === 'file') return entry.kind === 'file_change';
+        if (filter === 'tool') return entry.kind === 'mcp_tool_call' || entry.kind === 'collab_tool_call' || entry.kind === 'web_search';
+        if (filter === 'error') return entry.kind === 'error' || entry.status === 'failed' || entry.status === 'declined';
+        return true;
+      }
+
+      function renderPromptCard(task, detail, run) {
+        if (!detail || detail.selected_run_id !== run.run_id) {
+          return '<div class="detail-section" data-section-id="prompt">' +
+            '<div class="sec-title"><span>' + esc(t('prompt')) + '</span><small>' + esc(t('waiting')) + '</small></div>' +
+            '<div class="prompt-body"><pre>' + esc(task.objective || '') + '</pre></div></div>';
+        }
+        const key = detail.task_id + '/' + run.run_id;
+        const attr = esc(key);
+        const discKey = key + '/prompt';
+        const isOpen = state.disclosure.has(discKey) ? state.disclosure.get(discKey) : true;
+        const isExpanded = state.promptExpanded.has(key);
+        const envelope = state.envelopes.has(key);
+        const prompt = detail.runs_prompts.find(p => p.run_id === run.run_id);
+        const cut = truncated => truncated ? ' <small>… ' + esc(t('truncated')) + '</small>' : '';
+        const contract = Object.entries(detail.contract_summary || {}).map(([name, value]) => {
+          const lines = (Array.isArray(value) ? value : [value]).map(v => {
+            if (typeof v === 'string') return v;
+            if (v.argv) return JSON.stringify(v.argv) + (v.cwd_rel ? ' · ' + v.cwd_rel : '') +
+              (v.timeout_seconds ? ' · ' + v.timeout_seconds + 's' : '');
+            return [v.claim, v.evidence].filter(Boolean).join(' · ');
+          });
+          return lines.length ? '<div><strong>' + esc(t('contractKeys')[name]) + '</strong><pre>' +
+            esc(lines.join('\n')) + '</pre></div>' : '';
+        }).join('');
+        const charLen = (envelope ? detail.rendered_prompt : detail.objective_full).length;
+
+        return '<details' + (isOpen ? ' open' : '') + ' class="detail-section" data-section-id="prompt" data-disclosure="' + attr + '/prompt">' +
+          '<summary class="prompt-summary">' +
+          '<span><span class="disclosure-arrow" aria-hidden="true">▸</span> ' + esc(t('prompt')) + ' <span class="chip mono neutral">' + formatCompactNum(charLen) + 'c</span></span>' +
+          '<span class="prompt-controls">' +
+          '<button type="button" class="icon-btn" data-action="toggle-prompt-expand" data-key="' + attr + '">' +
+          esc(t(isExpanded ? 'collapseFull' : 'expandFull')) + '</button>' +
+          '<button type="button" class="icon-btn" data-action="envelope" data-key="' + attr + '">' +
+          esc(t(envelope ? 'objective' : 'envelope')) + '</button>' +
+          '<button type="button" class="icon-btn" data-action="copy-prompt" data-key="' + attr + '">' +
+          esc(t('copy')) + '</button></span></summary>' +
+          '<div class="prompt-body' + (isExpanded ? ' is-expanded' : '') + '" data-scroll="prompt/' + attr + (envelope ? '/raw' : '') + '">' +
+          '<div><strong>' + esc(t(envelope ? 'envelope' : 'objective')) + '</strong><pre>' +
+          esc(envelope ? detail.rendered_prompt : detail.objective_full) + '</pre>' +
+          cut(envelope ? detail.rendered_prompt_truncated : detail.objective_truncated) + '</div>' +
+          (!envelope ? contract + cut(detail.contract_truncated) : '') +
+          (!envelope && prompt && prompt.mode !== 'initial' ? '<div><strong>' + esc(t('guidance')) + '</strong><pre>' +
+            esc(prompt.instruction_full) + '</pre>' + cut(prompt.instruction_truncated) + '</div>' : '') +
+          '</div></details>';
+      }
+
+      function renderLiveStreamCard(detail, run) {
+        if (!detail || detail.selected_run_id !== run.run_id) {
+          return '<div class="detail-section"><small>' + esc(t('waiting')) + '</small></div>';
+        }
+        const live = detail.selected_run_live;
+        if (!live) return '';
+        const key = detail.task_id + '/' + run.run_id;
+        const attr = esc(key);
+        const cut = truncated => truncated ? ' <small>… ' + esc(t('truncated')) + '</small>' : '';
+
+        const filters = [
+          ['all', t('streamAll')],
+          ['command', t('streamCmd')],
+          ['reasoning', t('streamReason')],
+          ['file', t('streamFile')],
+          ['tool', t('streamTool')],
+          ['error', t('streamErr')],
+        ];
+        const filterCounts = {};
+        for (const [fk] of filters) {
+          filterCounts[fk] = fk === 'all' ? live.entries.length : live.entries.filter(e => matchesStreamFilter(e, fk)).length;
+        }
+        const filterHtml = '<div class="stream-filters">' + filters.map(([fk, label]) => {
+          const cnt = filterCounts[fk];
+          if (fk !== 'all' && cnt === 0) return '';
+          return '<button type="button" class="filter-tab' + (state.streamFilter === fk ? ' active' : '') +
+            '" data-action="set-stream-filter" data-stream-filter="' + fk + '">' +
+            esc(label) + '<span class="count-num">' + cnt + '</span></button>';
+        }).join('') + '</div>';
+
+        const visibleEntries = live.entries.filter(e => matchesStreamFilter(e, state.streamFilter));
+        const streamRows = visibleEntries.map(e => {
+          const id = esc(key + '/' + e.key);
+          const body = [['args', e.arguments], ['result', e.result], ['output', e.aggregated_output], ['error', e.error]]
+            .filter(([, value]) => value).map(([label, value]) =>
+              '<details data-disclosure="' + id + '/' + label + '"><summary>' +
+              esc(label === 'error' ? t('eventKinds').error : t(label)) + '</summary><pre>' + esc(value) + '</pre></details>').join('');
+          const files = (e.files || []).map(f => '<div>' +
+            renderFileReference('file-path', f.path, f.path, f.file_link) + '</div>').join('');
+          const report = e.report;
+          const claims = report ? [[t('secBlockers'), report.blockers], [t('secCounter'), report.counter_evidence]]
+            .map(([label, list]) => '<div style="margin-top:4px;font-size:11px;font-weight:600">' + esc(label) + ' (' + list.length + ')</div>' +
+              list.map(c => '<pre>' + esc([c.claim, c.evidence].filter(Boolean).join(' · ')) + '</pre>').join('')).join('') : '';
+          const statusCls = e.status === 'completed' ? 'ok' : e.status === 'failed' ? 'err' :
+            e.status === 'running' ? 'info' : (e.status === 'declined' || e.status === 'canceled') ? 'warn' : 'neutral';
+          const content = report
+            ? '<div><strong>' + esc(t('fwReportTitle') + ' · ' + reportedStatusBadge(report.status).text) + '</strong></div>' + claims
+            : e.kind === 'reasoning' || e.kind === 'agent_message'
+              ? '<div class="stream-prose">' + esc(e.text) + '</div>'
+              : e.kind === 'command_execution' || e.kind === 'verify'
+                ? '<pre>$ ' + esc(e.text) + '</pre>'
+                : '<div class="stream-prose mono">' + esc(e.kind === 'phase' ? phaseLabel(e.text) : e.text) + '</div>';
+
+          return '<div class="stream-row kind-' + esc(e.kind) + '"><div class="stream-meta"><time class="mono">' +
+            esc(formatClock(e.at)) + '</time><b>' +
+            esc(t('eventKinds')[e.kind] || e.kind) + '</b><span class="chip ' + statusCls + '">' +
+            esc(e.status === 'running' ? t('execRunning') : t('activityStatuses')[e.status] || e.status) + '</span>' +
+            (e.duration_ms != null ? '<span class="mono">' + esc(formatDuration(e.duration_ms)) + '</span>' : '') +
+            (e.exit_code != null ? '<span class="chip mono ' + (e.exit_code === 0 ? 'ok' : 'err') + '">exit=' + esc(e.exit_code) + '</span>' : '') +
+            '</div>' + content + body + files + cut(e.truncated) + '</div>';
+        }).join('');
+
+        return '<section class="detail-section" data-section-id="stream"><div class="stream-heading">' +
+          '<span style="font-size:11.5px;font-weight:650;color:var(--pb-fg-2)">' + esc(t('stream')) +
+          ' <span class="chip mono neutral">' + live.entries.length + '</span></span>' +
+          '<button type="button" class="icon-btn" data-action="follow" aria-pressed="' + state.followTail + '">' +
+          (state.followTail ? '✓ ' : '') + esc(t('follow')) + '</button></div>' +
+          filterHtml +
+          (live.omitted_count ? '<div class="activity-omitted">' + esc(t('omittedActivities')(live.omitted_count)) + '</div>' : cut(live.truncated)) +
+          '<div class="stream-list" data-scroll="stream/' + attr + '">' +
+          (streamRows || '<div style="padding:10px;color:var(--pb-fg-muted);font-size:11.5px">' + esc(t('streamEmptyFiltered')) + '</div>') +
+          (live.stderr_tail ? '<details data-disclosure="' + attr + '/stderr"><summary>stderr' +
+            cut(live.stderr_truncated) + '</summary><pre>' + esc(live.stderr_tail) + '</pre></details>' : '') +
+          '</div></section>';
+      }
+
+      function renderInspector(task) {
+        const isRunning = task.state === 'running';
+        const isConfirmingCancel = state.confirmCancelTask === task.task_id;
+        const isCanceling = state.cancelingTasks.has(task.task_id);
+        const cancelBtnHtml = isRunning
+          ? '<button type="button" class="danger-btn" data-action="cancel-task" data-task="' +
+            esc(task.task_id) + '">' +
+            esc(isCanceling ? t('canceling') : isConfirmingCancel ? t('cancelConfirm') : t('cancelBtn')) +
+            '</button>'
+          : '';
+
+        let revTabsHtml = '';
+        let jumpBarHtml = '';
+        let drawerHtml = '';
+        if (Array.isArray(task.runs) && task.runs.length > 0) {
+          const selectedRunId =
+            state.selectedRunByTask.get(task.task_id) || task.runs[task.runs.length - 1].run_id;
+          const activeDetail =
+            task.runs.find((r) => r.run_id === selectedRunId) || task.runs[task.runs.length - 1];
+
+          const detail = state.board.task_detail?.task_id === task.task_id ? state.board.task_detail : null;
+          const rounds = detail?.runs_prompts.map(p => task.runs.find(r => r.run_id === p.run_id) || p) || task.runs;
+          revTabsHtml = '<div class="rev-selector">' + rounds.map((r) => {
+            const rActive = r.run_id === activeDetail.run_id;
+            const rDot = r.execution_status === 'running' ? 'pulse'
+              : r.execution_status === 'succeeded' ? 'ok'
+                : r.execution_status === 'canceled' ? '' : 'err';
+            const rTitle = r.revision != null ? 'rev-' + r.revision + ' · ' + r.run_id : r.run_id;
+            return '<button type="button" class="rev-pill' + (rActive ? ' active' : '') +
+              '" data-action="select-run" data-task="' + esc(task.task_id) + '" data-run="' + esc(r.run_id) + '">' +
+              '<span class="dot ' + rDot + '"></span>' +
+              '<span class="mono">' + esc(rTitle) + '</span>' +
+              '<span style="opacity:0.75">(' + esc(modeLabel(r.mode)) + ')</span></button>';
+          }).join('') + '</div>';
+
+          const exB = execStatusBadge(activeDetail.execution_status);
+          const rpB = reportedStatusBadge(activeDetail.reported_status);
+          const vrB = verifyStatusBadge(activeDetail.verification_status);
+          const rExitText = state.lang === 'zh' ? activeDetail.exit_reason.label_zh : activeDetail.exit_reason.label_en;
+          const rExitCls = exitBadgeClass(activeDetail.exit_reason.code);
+          const rRoundDur = activeDetail.execution_status === 'running' && activeDetail.started_at
+            ? Math.max(0, Date.now() - Date.parse(activeDetail.started_at))
+            : activeDetail.duration_ms;
+
+          const coord = task.coordinator;
+          const bridge = bridgeBadgeInfo(coord);
+          const coordText = coord.model || (coord.agent + ' · ' + t('modelUnrecorded'));
+          const execText = (activeDetail.resolved_model || t('cliDefault')) +
+            (activeDetail.reasoning_effort ? ' · ' + activeDetail.reasoning_effort : '');
+
+          const usage = activeDetail.usage;
+          let usageHtml = '';
+          if (usage) {
+            const inp = usage.input_tokens || 0;
+            const cached = usage.cached_input_tokens || 0;
+            const newTok = Math.max(0, inp - cached);
+            const hitPct = inp > 0 ? Math.round((cached / inp) * 100) : 0;
+            usageHtml = '<div class="token-bar">' +
+              '<span>' + esc(t('tokensLabel')) + '</span>' +
+              '<div class="token-metrics mono">' +
+              '<span class="chip neutral">' + esc(t('tokIn')) + ' ' + formatCompactNum(inp) + '</span>' +
+              (cached ? '<span class="chip ok">' + esc(t('tokCache')) + ' ' + formatCompactNum(cached) +
+                ' (' + esc(t('tokHitRate')) + ' ' + hitPct + '%)</span>' : '') +
+              '<span class="chip info">' + esc(t('tokNew')) + ' ' + formatCompactNum(newTok) + '</span>' +
+              '<span class="chip neutral">' + esc(t('tokOut')) + ' ' + formatCompactNum(usage.output_tokens || 0) +
+                (usage.reasoning_output_tokens ? ' (' + esc(t('tokReason')) + ' ' + formatCompactNum(usage.reasoning_output_tokens) + ')' : '') +
+              '</span></div></div>';
+          }
+
+          const heroHtml = '<div class="hero-band">' +
+            '<div class="handoff-bar">' +
+            '<div class="handoff-route">' +
+            '<span class="handoff-node"><span class="role-tag coord">' + esc(t('coordRole')) + '</span>' +
+            '<span class="model-label">' + esc(coordText) + '</span>' +
+            '<span class="chip ' + bridge.cls + '">' + esc(bridge.text) + '</span></span>' +
+            '<span class="handoff-arrow" aria-hidden="true">→</span>' +
+            '<span class="handoff-node"><span class="role-tag exec">' + esc(t('execRole')) + '</span>' +
+            '<span class="model-label mono">' + esc(execText) + '</span>' +
+            '<span class="src-badge">' + esc(modelSourceLabel(activeDetail.model_source)) + '</span></span>' +
+            '</div>' +
+            '<span class="mono chip neutral">' + esc(activeDetail.revision !== null ? 'rev-' + activeDetail.revision : t('unpublishedRun')) +
+            ' · ' + esc(formatDuration(rRoundDur)) + '</span>' +
+            '</div>' +
+            renderLabeledPhaseTrack(activeDetail.execution_status === 'running' ? task.executor.phase : 'completed', activeDetail.execution_status === 'running') +
+            '<div class="firewall-grid">' +
+            '<div class="fw-box tone-' + exB.cls + '">' +
+            '<div class="fw-label"><span>' + esc(t('fwExecTitle')) + '</span><span class="mono">' + esc(formatDuration(rRoundDur)) + '</span></div>' +
+            '<div class="fw-value"><span class="chip ' + exB.cls + '">' + esc(exB.text) + '</span>' +
+            '<span class="chip ' + rExitCls + '">' + esc(rExitText) + '</span></div>' +
+            '<div class="fw-sub">exit_code: ' + esc(activeDetail.exit_code === null ? '—' : activeDetail.exit_code) +
+            (activeDetail.thread_id ? ' · thread: ' + esc(activeDetail.thread_id.slice(0, 12)) + '…' : '') + '</div></div>' +
+            '<div class="fw-box tone-' + rpB.cls + '">' +
+            '<div class="fw-label"><span>' + esc(t('fwReportTitle')) + '</span></div>' +
+            '<div class="fw-value"><span class="chip ' + rpB.cls + '">' + esc(rpB.text) + '</span></div>' +
+            '<div class="fw-sub">blockers: ' + (activeDetail.unverified_blockers ? activeDetail.unverified_blockers.length : 0) +
+            ' · counter: ' + (activeDetail.unverified_counter_evidence ? activeDetail.unverified_counter_evidence.length : 0) + '</div></div>' +
+            '<div class="fw-box tone-' + vrB.cls + '">' +
+            '<div class="fw-label"><span>' + esc(t('fwVerifyTitle')) + '</span></div>' +
+            '<div class="fw-value"><span class="chip ' + vrB.cls + '">' + esc(vrB.text) + '</span></div>' +
+            '<div class="fw-sub">commands: ' + (activeDetail.verify_results ? activeDetail.verify_results.length : 0) + '</div></div>' +
+            '</div>' +
+            usageHtml +
+            '</div>';
+
+          const renderClaimsSection = (title, items, kindCls) => {
+            if (!Array.isArray(items) || items.length === 0) return '';
+            const rows = items.map((it, idx) =>
+              '<div class="claim-item ' + kindCls + '">' +
+              '<div class="claim-head"><span class="claim-idx">#' + (idx + 1) + '</span><div>' + esc(it.claim) + '</div></div>' +
+              (it.evidence ? renderFileReference('claim-ev', it.evidence, it.evidence, it.evidence_link) : '') +
+              '</div>'
+            ).join('');
+            return '<div class="detail-section" data-section-id="claims">' +
+              '<div class="sec-title"><span>' + esc(title) + '</span><span class="chip mono neutral">' + items.length + '</span></div>' +
+              '<div class="claim-list">' + rows + '</div></div>';
+          };
+
+          const dt = activeDetail.delta_totals;
+          const filesHtml = Array.isArray(activeDetail.delta_files) && activeDetail.delta_files.length > 0
+            ? '<div class="detail-section" data-section-id="files">' +
+              '<div class="sec-title"><span>' + esc(t('secFiles')) + '</span>' +
+              '<span class="diff-stat">' +
+              (dt ? '<span class="ins">+' + dt.insertions + '</span><span class="del">-' + dt.deletions + '</span> · ' : '') +
+              '<span class="mono">' + activeDetail.delta_files.length + '</span></span></div>' +
+              '<div class="file-grid">' +
+              activeDetail.delta_files.map((f) => {
+                const totalLines = Math.max(1, (f.insertions || 0) + (f.deletions || 0));
+                const insPct = Math.round(((f.insertions || 0) / totalLines) * 100);
+                const delPct = 100 - insPct;
+                return '<div class="file-row">' +
+                  renderFileReference('file-path', '[' + f.status + '] ' + f.path, f.path, f.file_link) +
+                  '<span class="diff-bar" aria-hidden="true">' +
+                  '<span class="diff-bar-ins" style="width:' + insPct + '%"></span>' +
+                  '<span class="diff-bar-del" style="width:' + delPct + '%"></span></span>' +
+                  '<span class="diff-stat"><span class="ins">+' + f.insertions + '</span><span class="del">-' + f.deletions + '</span></span></div>';
+              }).join('') +
+              '</div></div>'
+            : '';
+
+          const verifyCmdsHtml = Array.isArray(activeDetail.verify_results) && activeDetail.verify_results.length > 0
+            ? '<div class="detail-section">' +
+              '<div class="sec-title"><span>' + esc(t('secVerifyCmds')) + '</span></div>' +
+              '<div class="claim-list">' +
+              activeDetail.verify_results.map((v) =>
+                '<div class="claim-item ' + (v.exit_code === 0 && !v.timed_out ? 'is-counter' : 'is-blocker') + '">' +
+                '<div class="mono" style="display:flex;justify-content:space-between;gap:8px;align-items:center">' +
+                '<span>$ ' + esc((v.argv || []).join(' ')) + '</span>' +
+                '<span class="chip ' + (v.exit_code === 0 && !v.timed_out ? 'ok' : 'err') + '">exit=' +
+                esc(v.exit_code ?? 'null') + ' (' + formatDuration(v.duration_ms) + ')</span></div>' +
+                (v.output_excerpt ? '<pre>' + esc(v.output_excerpt) + '</pre>' : '') +
+                '</div>'
+              ).join('') +
+              '</div></div>'
+            : '';
+
+          const eventsHtml = Array.isArray(activeDetail.native_events) && activeDetail.native_events.length > 0
+            ? '<div class="detail-section">' +
+              '<div class="sec-title"><span>' + esc(t('secEvents')) + '</span></div>' +
+              '<div class="claim-list">' +
+              activeDetail.native_events.map((ev) =>
+                '<div class="claim-item mono" style="font-size:11px;color:var(--pb-fg-2)">' + esc(ev.message) + '</div>'
+              ).join('') +
+              '</div></div>'
+            : '';
+
+          const blockersHtml = renderClaimsSection(t('secBlockers'), activeDetail.unverified_blockers, 'is-blocker');
+          const counterHtml = renderClaimsSection(t('secCounter'), activeDetail.unverified_counter_evidence, 'is-counter');
+          const streamHtml = renderLiveStreamCard(detail, activeDetail);
+          const promptHtml = renderPromptCard(task, detail, activeDetail);
+          const activitiesDefaultOpen = activeDetail.execution_status === 'running' &&
+            (!detail?.selected_run_live || detail.selected_run_live.entries.length === 0);
+          const activitiesHtml = renderActivities(task.task_id, activeDetail, activitiesDefaultOpen);
+
+          const jumpItems = [
+            ['prompt', t('jumpPrompt'), Boolean(promptHtml)],
+            ['claims', t('jumpClaims'), Boolean(blockersHtml || counterHtml)],
+            ['files', t('jumpFiles'), Boolean(filesHtml)],
+            ['stream', t('jumpStream'), Boolean(streamHtml)],
+            ['activities', t('jumpActivities'), Boolean(activitiesHtml)],
+          ].filter((x) => x[2]);
+          if (jumpItems.length > 1) {
+            jumpBarHtml = '<div class="jump-bar">' + jumpItems.map(([sec, label]) =>
+              '<button type="button" class="filter-tab" data-action="jump-section" data-section="' + sec + '">' + esc(label) + '</button>'
+            ).join('') + '</div>';
+          }
+
+          const orderedSections = activeDetail.execution_status === 'running'
+            ? [promptHtml, streamHtml, blockersHtml, counterHtml, filesHtml, verifyCmdsHtml, activitiesHtml, eventsHtml]
+            : [promptHtml, blockersHtml, counterHtml, filesHtml, verifyCmdsHtml, streamHtml, activitiesHtml, eventsHtml];
+
+          drawerHtml = '<div class="detail-drawer">' + heroHtml + orderedSections.join('') + '</div>';
+        }
+
+        return '<div class="inspector-head">' +
+          '<div class="inspector-head-top"><div style="min-width:0;flex:1">' +
+          '<button type="button" class="icon-btn back-button" data-action="back">' + esc(t('back')) + '</button>' +
+          '<h2>' + esc(task.title || task.objective) + '</h2>' +
+          '<div class="inspector-meta">' +
+          '<span class="chip mono clickable" data-action="copy-id" data-copy="' + esc(task.task_id) + '">' + esc(task.task_id) + '</span>' +
+          '<span class="chip">' + esc(task.workspace_name) + ' · ' + esc(task.workspace_mode === 'worktree' ? t('wsWorktree') : t('wsSnapshot')) + '</span>' +
+          '<span class="chip mono">rev-' + esc(task.current_revision) + '</span>' +
+          '</div></div>' + cancelBtnHtml + '</div>' +
+          revTabsHtml +
+          jumpBarHtml +
+          '</div>' + drawerHtml;
+      }
+
       function renderTaskCard(task) {
         const isRunning = task.state === 'running';
         const isAttn = isTaskAttention(task);
-        const expanded = state.expandedTasks.has(task.task_id);
+        const selected = state.selectedTaskId === task.task_id;
 
         const dotCls = isRunning ? 'dot pulse' : isAttn ? 'dot err' : 'dot ok';
         const cardCls =
           'task-card' +
           (isRunning ? ' is-running' : isAttn ? ' is-attention' : '') +
-          (expanded ? ' expanded' : '');
+          (selected ? ' selected' : '');
 
         const lt = task.ledger_totals || { files_changed: 0, insertions: 0, deletions: 0 };
         const diffHtml =
@@ -1245,9 +2032,6 @@
         const coordModelHtml = coord.model
           ? '<span class="model-label" title="' + esc(coord.agent + ' · ' + coord.model) + '">' + esc(coord.model) + '</span>'
           : '<span class="model-label unrecorded">' + esc(coord.agent) + ' · ' + esc(t('modelUnrecorded')) + '</span>';
-        const coordActStr =
-          actionLabel(coord.last_action) +
-          (coord.last_action_detail ? ' · ' + coord.last_action_detail : '');
 
         const exec = task.executor;
         const codexModelText =
@@ -1256,400 +2040,57 @@
         const exitReasonObj = exec.exit_reason || { code: 'normal', label_zh: '正常退出', label_en: 'Normal' };
         const exitLabel = state.lang === 'zh' ? exitReasonObj.label_zh : exitReasonObj.label_en;
         const exitCls = exitBadgeClass(exitReasonObj.code);
+        const execBadgeCls = isRunning ? 'info' : exitCls;
+        const execBadgeText = isRunning ? phaseLabel(exec.phase) : exitLabel;
 
         const liveMs =
           isRunning && exec.started_at
             ? Math.max(0, Date.now() - Date.parse(exec.started_at))
             : exec.duration_ms;
 
-        const isConfirmingCancel = state.confirmCancelTask === task.task_id;
-        const isCanceling = state.cancelingTasks.has(task.task_id);
-        const cancelBtnHtml = isRunning
-          ? '<button type="button" class="danger-btn" data-action="cancel-task" data-task="' +
-            esc(task.task_id) +
-            '">' +
-            esc(isCanceling ? t('canceling') : isConfirmingCancel ? t('cancelConfirm') : t('cancelBtn')) +
-            '</button>'
-          : '';
-
-        let drawerHtml = '';
-        if (expanded && Array.isArray(task.runs) && task.runs.length > 0) {
-          const selectedRunId =
-            state.selectedRunByTask.get(task.task_id) || task.runs[task.runs.length - 1].run_id;
-          const activeDetail =
-            task.runs.find((r) => r.run_id === selectedRunId) || task.runs[task.runs.length - 1];
-
-          const revTabs = task.runs
-            .map((r) => {
-              const rActive = r.run_id === activeDetail.run_id;
-              const rDot =
-                r.execution_status === 'running'
-                  ? 'pulse'
-                  : r.execution_status === 'succeeded'
-                    ? 'ok'
-                    : r.execution_status === 'canceled'
-                      ? ''
-                      : 'err';
-              const rTitle = r.revision !== null ? 'rev-' + r.revision + ' · ' + r.run_id : r.run_id;
-              return (
-                '<button type="button" class="rev-pill' +
-                (rActive ? ' active' : '') +
-                '" data-action="select-run" data-task="' +
-                esc(task.task_id) +
-                '" data-run="' +
-                esc(r.run_id) +
-                '">' +
-                '<span class="dot ' +
-                rDot +
-                '"></span>' +
-                '<span class="mono">' +
-                esc(rTitle) +
-                '</span>' +
-                '<span style="opacity:0.75">(' +
-                esc(modeLabel(r.mode)) +
-                ')</span>' +
-                '</button>'
-              );
-            })
-            .join('');
-
-          const exB = execStatusBadge(activeDetail.execution_status);
-          const rpB = reportedStatusBadge(activeDetail.reported_status);
-          const vrB = verifyStatusBadge(activeDetail.verification_status);
-          const rExitText =
-            state.lang === 'zh'
-              ? activeDetail.exit_reason.label_zh
-              : activeDetail.exit_reason.label_en;
-          const rExitCls = exitBadgeClass(activeDetail.exit_reason.code);
-
-          const headlineSummary =
-            (activeDetail.execution_status === 'failed' || activeDetail.execution_status === 'timed_out'
-              ? rExitText
-              : exB.text) +
-            ' · ' +
-            rpB.text +
-            ' · ' +
-            vrB.text;
-
-          const usage = activeDetail.usage;
-          const usageHtml = usage
-            ? '<span class="mono" style="font-size:11px;color:var(--pb-fg-muted)">' +
-              esc(t('tokensLabel')) +
-              ': ' +
-              esc(t('tokIn')) +
-              ' ' +
-              formatCompactNum(usage.input_tokens || 0) +
-              (usage.cached_input_tokens
-                ? ' (' + esc(t('tokCache')) + ' ' + formatCompactNum(usage.cached_input_tokens) + ')'
-                : '') +
-              ' · ' +
-              esc(t('tokOut')) +
-              ' ' +
-              formatCompactNum(usage.output_tokens || 0) +
-              (usage.reasoning_output_tokens
-                ? ' (' + esc(t('tokReason')) + ' ' + formatCompactNum(usage.reasoning_output_tokens) + ')'
-                : '') +
-              '</span>'
-            : '';
-
-          const renderClaimsSection = (title, items) => {
-            if (!Array.isArray(items) || items.length === 0) return '';
-            const rows = items
-              .map(
-                (it) =>
-                  '<div class="claim-item">' +
-                  '<div>' +
-                  esc(it.claim) +
-                  '</div>' +
-                  (it.evidence
-                    ? '<span class="claim-ev" data-action="open-file" data-ws="' +
-                      esc(task.workspace) +
-                      '" data-path="' +
-                      esc(it.evidence) +
-                      '">' +
-                      esc(it.evidence) +
-                      '</span>'
-                    : '') +
-                  '</div>'
-              )
-              .join('');
-            return (
-              '<div class="detail-section">' +
-              '<div class="sec-title"><span>' +
-              esc(title) +
-              '</span><span class="mono">' +
-              items.length +
-              '</span></div>' +
-              '<div class="claim-list">' +
-              rows +
-              '</div></div>'
-            );
-          };
-
-          const filesHtml =
-            Array.isArray(activeDetail.delta_files) && activeDetail.delta_files.length > 0
-              ? '<div class="detail-section">' +
-                '<div class="sec-title"><span>' +
-                esc(t('secFiles')) +
-                '</span><span class="mono">' +
-                activeDetail.delta_files.length +
-                '</span></div>' +
-                '<div class="file-grid">' +
-                activeDetail.delta_files
-                  .map(
-                    (f) =>
-                      '<div class="file-row">' +
-                      '<span class="file-path" data-action="open-file" data-ws="' +
-                      esc(task.workspace) +
-                      '" data-path="' +
-                      esc(f.path) +
-                      '">[' +
-                      esc(f.status) +
-                      '] ' +
-                      esc(f.path) +
-                      '</span>' +
-                      '<span class="diff-stat"><span class="ins">+' +
-                      f.insertions +
-                      '</span><span class="del">-' +
-                      f.deletions +
-                      '</span></span></div>'
-                  )
-                  .join('') +
-                '</div></div>'
-              : '';
-
-          const verifyCmdsHtml =
-            Array.isArray(activeDetail.verify_results) && activeDetail.verify_results.length > 0
-              ? '<div class="detail-section">' +
-                '<div class="sec-title"><span>' +
-                esc(t('secVerifyCmds')) +
-                '</span></div>' +
-                '<div class="claim-list">' +
-                activeDetail.verify_results
-                  .map(
-                    (v) =>
-                      '<div class="claim-item">' +
-                      '<div class="mono" style="display:flex;justify-content:space-between;gap:8px">' +
-                      '<span>$ ' +
-                      esc((v.argv || []).join(' ')) +
-                      '</span>' +
-                      '<span class="chip ' +
-                      (v.exit_code === 0 && !v.timed_out ? 'ok' : 'err') +
-                      '">exit=' +
-                      esc(v.exit_code ?? 'null') +
-                      ' (' +
-                      formatDuration(v.duration_ms) +
-                      ')</span></div>' +
-                      (v.output_excerpt
-                        ? '<div class="mono" style="font-size:10.5px;color:var(--pb-fg-muted);white-space:pre-wrap">' +
-                          esc(v.output_excerpt) +
-                          '</div>'
-                        : '') +
-                      '</div>'
-                  )
-                  .join('') +
-                '</div></div>'
-              : '';
-
-          const eventsHtml =
-            Array.isArray(activeDetail.native_events) && activeDetail.native_events.length > 0
-              ? '<div class="detail-section">' +
-                '<div class="sec-title"><span>' +
-                esc(t('secEvents')) +
-                '</span></div>' +
-                '<div class="claim-list">' +
-                activeDetail.native_events
-                  .map(
-                    (ev) =>
-                      '<div class="claim-item mono" style="font-size:10.5px;color:var(--pb-fg-2)">' +
-                      esc(ev.message) +
-                      '</div>'
-                  )
-                  .join('') +
-                '</div></div>'
-              : '';
-
-          const rRoundDur =
-            activeDetail.execution_status === 'running' && activeDetail.started_at
-              ? Math.max(0, Date.now() - Date.parse(activeDetail.started_at))
-              : activeDetail.duration_ms;
-
-          drawerHtml =
-            '<div class="detail-drawer">' +
-            '<div class="rev-selector">' +
-            revTabs +
-            '</div>' +
-            '<div class="verdict-headline">' +
-            '<div class="verdict-summary-text">' +
-            '<span class="mono chip">' +
-            esc(activeDetail.revision !== null ? 'rev-' + activeDetail.revision : t('unpublishedRun')) +
-            '</span>' +
-            '<span>' +
-            esc(headlineSummary) +
-            '</span>' +
-            '</div>' +
-            usageHtml +
-            '</div>' +
-            '<div class="firewall-grid">' +
-            '<div class="fw-box">' +
-            '<div class="fw-label"><span>' +
-            esc(t('fwExecTitle')) +
-            '</span><span class="mono">' +
-            esc(formatDuration(rRoundDur)) +
-            '</span></div>' +
-            '<div class="fw-value"><span class="chip ' +
-            exB.cls +
-            '">' +
-            esc(exB.text) +
-            '</span><span class="chip ' +
-            rExitCls +
-            '">' +
-            esc(rExitText) +
-            '</span></div>' +
-            '<div class="fw-sub">exit_code: ' +
-            esc(activeDetail.exit_code === null ? '—' : activeDetail.exit_code) +
-            (activeDetail.thread_id ? ' · thread: ' + esc(activeDetail.thread_id.slice(0, 12)) + '…' : '') +
-            '</div></div>' +
-            '<div class="fw-box">' +
-            '<div class="fw-label"><span>' +
-            esc(t('fwReportTitle')) +
-            '</span></div>' +
-            '<div class="fw-value"><span class="chip ' +
-            rpB.cls +
-            '">' +
-            esc(rpB.text) +
-            '</span></div>' +
-            '<div class="fw-sub">blockers: ' +
-            (activeDetail.unverified_blockers ? activeDetail.unverified_blockers.length : 0) +
-            ' · counter: ' +
-            (activeDetail.unverified_counter_evidence ? activeDetail.unverified_counter_evidence.length : 0) +
-            '</div></div>' +
-            '<div class="fw-box">' +
-            '<div class="fw-label"><span>' +
-            esc(t('fwVerifyTitle')) +
-            '</span></div>' +
-            '<div class="fw-value"><span class="chip ' +
-            vrB.cls +
-            '">' +
-            esc(vrB.text) +
-            '</span></div>' +
-            '<div class="fw-sub">commands: ' +
-            (activeDetail.verify_results ? activeDetail.verify_results.length : 0) +
-            '</div></div>' +
-            '</div>' +
-            renderClaimsSection(t('secBlockers'), activeDetail.unverified_blockers) +
-            renderClaimsSection(t('secCounter'), activeDetail.unverified_counter_evidence) +
-            filesHtml +
-            verifyCmdsHtml +
-            eventsHtml +
-            '</div>';
-        }
-
         return (
-          '<article class="' +
+          '<article tabindex="0" data-action="select-task" data-task="' + esc(task.task_id) + '" class="' +
           cardCls +
           '" data-task-card="' +
           esc(task.task_id) +
           '">' +
-          '<div class="card-head" data-action="toggle-expand" data-task="' +
-          esc(task.task_id) +
-          '">' +
+          '<div class="card-head">' +
           '<div class="head-left">' +
-          '<div class="head-dot-wrap"><span class="' +
-          dotCls +
-          '"></span></div>' +
-          '<div class="title-stack">' +
-          '<div class="task-objective" title="' +
-          esc(task.objective) +
-          '">' +
-          esc(task.objective) +
-          '</div>' +
-          '<div class="task-submeta">' +
-          '<span class="chip mono clickable" data-action="copy-id" data-copy="' +
-          esc(task.task_id) +
-          '">' +
-          esc(task.task_id) +
-          '</span>' +
-          '<span class="chip">' +
-          esc(task.workspace_name) +
-          ' · ' +
-          esc(task.workspace_mode === 'worktree' ? t('wsWorktree') : t('wsSnapshot')) +
-          '</span>' +
-          '<span class="chip mono">rev-' +
-          esc(task.current_revision) +
-          '</span>' +
-          '</div></div></div>' +
+          '<div class="head-dot-wrap"><span class="' + dotCls + '"></span></div>' +
+          '<div class="task-objective" title="' + esc(task.title || task.objective) + '">' +
+          esc(task.title || task.objective) +
+          '</div></div>' +
           '<div class="head-right">' +
           diffHtml +
-          '<span class="chev" aria-hidden="true">▾</span>' +
           '</div></div>' +
           '<div class="agent-lanes">' +
           '<div class="agent-row">' +
           '<div class="role-cell">' +
-          '<span class="role-tag coord">' +
-          esc(t('coordRole')) +
-          '</span>' +
+          '<span class="role-tag coord">' + esc(t('coordRole')) + '</span>' +
           coordModelHtml +
           '</div>' +
-          '<div class="status-cell">' +
-          '<span class="chip ' +
-          bridge.cls +
-          '">' +
-          esc(bridge.text) +
-          '</span>' +
-          '<span class="event-ticker" title="' +
-          esc(coordActStr) +
-          '">' +
-          esc(coordActStr) +
-          '</span>' +
+          '<div class="status-cell"><span class="chip ' + bridge.cls + '">' + esc(bridge.text) + '</span></div>' +
+          '<div class="right-cell"><span class="timer">' + esc(formatClock(coord.last_action_at)) + '</span></div>' +
           '</div>' +
-          '<div class="right-cell">' +
-          '<span class="timer">' +
-          esc(formatClock(coord.last_action_at)) +
-          '</span>' +
-          '</div></div>' +
           '<div class="agent-row">' +
           '<div class="role-cell">' +
-          '<span class="role-tag exec">' +
-          esc(t('execRole')) +
-          '</span>' +
-          '<span class="model-label mono" title="' +
-          esc(codexModelText) +
-          '">' +
-          esc(codexModelText) +
-          '</span>' +
-          '<span class="src-badge">' +
-          esc(modelSourceLabel(exec.model_source)) +
-          '</span>' +
+          '<span class="role-tag exec">' + esc(t('execRole')) + '</span>' +
+          '<span class="model-label mono" title="' + esc(codexModelText) + '">' + esc(codexModelText) + '</span>' +
           '</div>' +
-          '<div class="status-cell">' +
-          '<span class="chip ' +
-          (isRunning ? 'info' : 'neutral') +
-          '">' +
-          esc(phaseLabel(exec.phase)) +
-          '</span>' +
-          renderPhaseStepper(exec.phase, isRunning) +
-          (exec.last_event
-            ? '<span class="event-ticker" title="' + esc(exec.last_event) + '">' + esc(exec.last_event) + '</span>'
+          '<div class="status-cell"><span class="chip ' + execBadgeCls + '">' + esc(execBadgeText) + '</span></div>' +
+          '<div class="right-cell"><span class="timer' + (isRunning ? ' live' : '') + '" data-live-started="' +
+          esc(isRunning && exec.started_at ? exec.started_at : '') + '">' + esc(formatDuration(liveMs)) + '</span></div>' +
+          '</div>' +
+          '</div>' +
+          (isRunning && exec.last_event
+            ? '<div class="card-ticker" title="' + esc(exec.last_event) + '">▸ ' + esc(exec.last_event) + '</div>'
             : '') +
+          '<div class="card-foot">' +
+          '<span class="card-foot-meta"><span>' + esc(task.workspace_name) + '</span><span>·</span><span>' +
+          esc(task.workspace_mode === 'worktree' ? t('wsWorktree') : t('wsSnapshot')) + '</span><span>·</span><span class="mono">rev-' +
+          esc(task.current_revision) + '</span></span>' +
+          '<span class="chip mono clickable" data-action="copy-id" data-copy="' + esc(task.task_id) + '">' + esc(task.task_id) + '</span>' +
           '</div>' +
-          '<div class="right-cell">' +
-          '<span class="timer' +
-          (isRunning ? ' live' : '') +
-          '" data-live-started="' +
-          esc(isRunning && exec.started_at ? exec.started_at : '') +
-          '">' +
-          esc(formatDuration(liveMs)) +
-          '</span>' +
-          '<span class="chip ' +
-          exitCls +
-          '">' +
-          esc(exitLabel) +
-          '</span>' +
-          cancelBtnHtml +
-          '</div></div>' +
-          '</div>' +
-          drawerHtml +
           '</article>'
         );
       }
@@ -1657,13 +2098,37 @@
       function notifyInlineHeight() {
         const rootEl = document.getElementById('root');
         if (!rootEl || !state.connected) return;
-        const h = Math.min(780, Math.max(140, Math.ceil((rootEl.scrollHeight || 220) + 8)));
+        const rectH = typeof rootEl.getBoundingClientRect === 'function'
+          ? Math.ceil(rootEl.getBoundingClientRect().height || 0) : 0;
+        const measured = Math.max(rootEl.scrollHeight || 0, rectH);
+        const h = Math.min(state.inlineMaxHeight, Math.max(220, Math.ceil(measured + 12)));
+        if (h === state.lastNotifiedHeight) return;
+        state.lastNotifiedHeight = h;
         sendRpcNotification('ui/notifications/size-changed', { height: h });
       }
 
-      function renderBoard() {
+      function renderBoard(opts) {
         const root = document.getElementById('root');
         if (!root) return;
+        const fromPoll = Boolean(opts && opts.fromPoll);
+
+        if (fromPoll) {
+          const sel = typeof window.getSelection === 'function' ? window.getSelection() : null;
+          const hasSelection = Boolean(sel && !sel.isCollapsed);
+          if (state.pointerDown || (Date.now() - state.lastUserScrollMs < 1500) || hasSelection) {
+            state.pendingPollRender = true;
+            if (!state.flushTimer) {
+              state.flushTimer = setTimeout(() => {
+                state.flushTimer = null;
+                if (state.pendingPollRender) {
+                  state.pendingPollRender = false;
+                  renderBoard({ fromPoll: true });
+                }
+              }, 600);
+            }
+            return;
+          }
+        }
 
         const b = state.board;
         const summary = (b && b.summary) || {
@@ -1689,7 +2154,7 @@
         }
 
         const focusToggleBtn =
-          state.initialFocusTaskId && b && b.tasks && b.tasks.length > 1
+          b && b.tasks && b.tasks.length > 1
             ? '<button type="button" class="icon-btn" data-action="toggle-focus-scope">' +
               esc(state.inlineFocusedOnly ? t('showAllTasks') + ' (' + b.tasks.length + ')' : t('focusSingleTask')) +
               '</button>'
@@ -1703,25 +2168,21 @@
             (state.filter === 'all' ? ' active' : '') +
             '" data-action="set-filter" data-filter="all">' +
             esc(t('filterAll')) +
-            '<span class="count-num">' +
-            summary.total_tasks +
-            '</span></button>' +
+            '<span class="count-num">' + summary.total_tasks + '</span></button>' +
             '<button type="button" class="filter-tab' +
             (state.filter === 'running' ? ' active' : '') +
             '" data-action="set-filter" data-filter="running">' +
             esc(t('filterRunning')) +
-            '<span class="count-num">' +
-            summary.running_tasks +
-            '</span></button>' +
+            '<span class="count-num">' + summary.running_tasks + '</span></button>' +
             '<button type="button" class="filter-tab' +
             (state.filter === 'attention' ? ' active' : '') +
             '" data-action="set-filter" data-filter="attention">' +
             esc(t('filterAttention')) +
-            '<span class="count-num">' +
-            summary.failed_or_interrupted_tasks +
-            '</span></button>' +
+            '<span class="count-num">' + summary.failed_or_interrupted_tasks + '</span></button>' +
             '</div></div>';
 
+        const selected = tasks.find(task => task.task_id === state.selectedTaskId) || tasks[0];
+        state.selectedTaskId = selected?.task_id || null;
         const listHtml =
           tasks.length > 0
             ? '<div class="task-list">' + tasks.map(renderTaskCard).join('') + '</div>'
@@ -1731,50 +2192,75 @@
               esc(t('emptyDesc')) +
               '</div></div>';
 
-        root.innerHTML =
+        const windowScrollY = typeof window.scrollY === 'number' ? window.scrollY : 0;
+        for (const list of document.querySelectorAll('[data-activity-run]')) {
+          state.activityScrollByRun.set(list.dataset.activityRun, list.scrollTop);
+        }
+        for (const el of document.querySelectorAll('[data-disclosure]')) state.disclosure.set(el.dataset.disclosure, el.open);
+        for (const el of document.querySelectorAll('[data-scroll]')) state.scroll.set(el.dataset.scroll, el.scrollTop);
+
+        const nextHtml =
           '<header class="topbar">' +
           '<div class="topbar-main">' +
           '<div class="brand">' +
           '<span class="brand-icon">PB</span>' +
-          '<span class="brand-title">' +
-          esc(t('boardTitle')) +
-          '</span>' +
+          '<span class="brand-title">' + esc(t('boardTitle')) + '</span>' +
           '<span class="live-pill">' +
-          '<span class="dot ' +
-          (anyRunning ? 'pulse' : 'ok') +
-          '"></span>' +
-          '<span>' +
-          esc(anyRunning ? t('liveSync') : t('idleSync')) +
-          '</span>' +
+          '<span class="dot ' + (anyRunning ? 'pulse' : 'ok') + '"></span>' +
+          '<span>' + esc(anyRunning ? t('liveSync') : t('idleSync')) + '</span>' +
           '</span>' +
           '</div>' +
           '<div class="topbar-actions">' +
           '<span class="default-model-chip mono" title="Default Codex CLI Model">' +
-          esc(t('defaultModelPrefix')) +
-          ' ' +
-          esc(defModText) +
+          esc(t('defaultModelPrefix')) + ' ' + esc(defModText) +
           '</span>' +
           focusToggleBtn +
-          '<button type="button" class="icon-btn" data-action="refresh">' +
-          '↻ ' +
-          esc(t('refresh')) +
-          '</button>' +
+          '<button type="button" class="icon-btn" data-action="refresh">↻ ' + esc(t('refresh')) + '</button>' +
           '<div class="seg-group" role="group" aria-label="Language">' +
-          '<button type="button" class="seg-btn' +
-          (state.lang === 'zh' ? ' active' : '') +
-          '" data-action="set-lang" data-lang="zh">中文</button>' +
-          '<button type="button" class="seg-btn' +
-          (state.lang === 'en' ? ' active' : '') +
-          '" data-action="set-lang" data-lang="en">EN</button>' +
+          '<button type="button" class="seg-btn' + (state.lang === 'zh' ? ' active' : '') + '" data-action="set-lang" data-lang="zh">中文</button>' +
+          '<button type="button" class="seg-btn' + (state.lang === 'en' ? ' active' : '') + '" data-action="set-lang" data-lang="en">EN</button>' +
           '</div>' +
           '</div></div>' +
           filterBarHtml +
           '</header>' +
-          listHtml;
+          '<main class="workbench' + (state.showDetail ? ' show-detail' : '') + '">' +
+          '<section class="master" data-scroll="master">' + listHtml + '</section>' +
+          '<section class="inspector" data-scroll="' + esc('inspector/' + state.selectedTaskId) + '">' +
+          (selected ? renderInspector(selected) : '<div class="inspector-empty">' + esc(t('selectTask')) + '</div>') +
+          '</section></main>';
 
+        if (fromPoll && nextHtml === state.lastRenderedHtml) {
+          state.pendingPollRender = false;
+          return;
+        }
+
+        state.restoringScroll = true;
+        state.pendingPollRender = false;
+        state.lastRenderedHtml = nextHtml;
+        root.innerHTML = nextHtml;
+
+        for (const el of document.querySelectorAll('[data-disclosure]')) {
+          if (state.disclosure.has(el.dataset.disclosure)) el.open = state.disclosure.get(el.dataset.disclosure);
+        }
+        const applyScrollRestore = () => {
+          for (const list of document.querySelectorAll('[data-activity-run]')) {
+            list.scrollTop = state.activityScrollByRun.get(list.dataset.activityRun) || 0;
+          }
+          for (const el of document.querySelectorAll('[data-scroll]')) {
+            el.scrollTop = state.followTail && el.dataset.scroll.startsWith('stream/')
+              ? el.scrollHeight : state.scroll.get(el.dataset.scroll) || 0;
+          }
+          if (typeof window.scrollTo === 'function') window.scrollTo(0, windowScrollY);
+        };
+        applyScrollRestore();
         if (typeof requestAnimationFrame === 'function') {
-          requestAnimationFrame(notifyInlineHeight);
+          requestAnimationFrame(() => {
+            applyScrollRestore();
+            state.restoringScroll = false;
+            notifyInlineHeight();
+          });
         } else {
+          state.restoringScroll = false;
           notifyInlineHeight();
         }
       }
@@ -1795,20 +2281,60 @@
         if (action === 'set-filter') {
           ev.stopPropagation();
           state.filter = btn.getAttribute('data-filter') || 'all';
+          state.showDetail = false;
+          renderBoard();
+          await pollServerBoard();
+          return;
+        }
+
+        if (action === 'set-stream-filter') {
+          ev.stopPropagation();
+          state.streamFilter = btn.getAttribute('data-stream-filter') || 'all';
           renderBoard();
           return;
         }
 
         if (action === 'toggle-focus-scope') {
           ev.stopPropagation();
+          if (!state.inlineFocusedOnly) state.initialFocusTaskId = state.selectedTaskId;
           state.inlineFocusedOnly = !state.inlineFocusedOnly;
           renderBoard();
+          await pollServerBoard();
           return;
         }
 
         if (action === 'refresh') {
           ev.stopPropagation();
+          state.lastRenderedHtml = '';
+          state.lastUserScrollMs = 0;
+          state.pointerDown = false;
           await pollServerBoard();
+          return;
+        }
+
+        if (action === 'jump-section') {
+          ev.stopPropagation();
+          const sec = btn.getAttribute('data-section');
+          const el = sec && typeof document.querySelector === 'function'
+            ? document.querySelector('[data-section-id="' + sec + '"]')
+            : null;
+          if (el) {
+            if (el.tagName === 'DETAILS') el.open = true;
+            el.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+          }
+          return;
+        }
+
+        if (action === 'toggle-prompt-expand') {
+          ev.preventDefault?.();
+          ev.stopPropagation();
+          const key = btn.getAttribute('data-key');
+          if (key) {
+            if (state.promptExpanded.has(key)) state.promptExpanded.delete(key);
+            else state.promptExpanded.add(key);
+            state.disclosure.set(key + '/prompt', true);
+            renderBoard();
+          }
           return;
         }
 
@@ -1826,9 +2352,11 @@
 
         if (action === 'open-file') {
           ev.stopPropagation();
-          const ws = btn.getAttribute('data-ws') || '';
-          const p = btn.getAttribute('data-path') || '';
-          await openWorkspaceFileOrCopy(ws, p);
+          await openWorkspaceFileOrCopy(
+            btn.getAttribute('data-uri'),
+            btn.getAttribute('data-uri-line'),
+            btn.getAttribute('data-raw')
+          );
           return;
         }
 
@@ -1839,6 +2367,7 @@
           if (tid && rid) {
             state.selectedRunByTask.set(tid, rid);
             renderBoard();
+            await pollServerBoard();
           }
           return;
         }
@@ -1871,12 +2400,78 @@
           return;
         }
 
-        if (action === 'toggle-expand') {
-          const tid = btn.getAttribute('data-task');
-          if (!tid) return;
-          if (state.expandedTasks.has(tid)) state.expandedTasks.delete(tid);
-          else state.expandedTasks.add(tid);
+        if (action === 'select-task') {
+          state.selectedTaskId = btn.getAttribute('data-task');
+          state.showDetail = true;
           renderBoard();
+          await pollServerBoard();
+        } else if (action === 'back') {
+          state.showDetail = false;
+          renderBoard();
+        } else if (action === 'follow') {
+          state.followTail = !state.followTail;
+          renderBoard();
+        } else if (action === 'envelope') {
+          ev.preventDefault?.();
+          ev.stopPropagation();
+          const key = btn.getAttribute('data-key');
+          if (state.envelopes.has(key)) state.envelopes.delete(key);
+          else state.envelopes.add(key);
+          state.disclosure.set(key + '/prompt', true);
+          renderBoard();
+        } else if (action === 'copy-prompt') {
+          ev.preventDefault?.();
+          ev.stopPropagation();
+          const detail = state.board.task_detail;
+          const text = state.envelopes.has(btn.getAttribute('data-key')) ? detail.rendered_prompt : detail.objective_full;
+          try { await navigator.clipboard.writeText(text); showToast(t('copied')); } catch {}
+        }
+      });
+
+      window.addEventListener('pointerdown', () => { state.pointerDown = true; });
+      const endPointer = () => {
+        state.pointerDown = false;
+        if (state.pendingPollRender) {
+          state.pendingPollRender = false;
+          renderBoard({ fromPoll: true });
+        }
+      };
+      window.addEventListener('pointerup', endPointer);
+      window.addEventListener('pointercancel', endPointer);
+      window.addEventListener('resize', () => {
+        if (state.connected && state.selectedTaskId && !state.board?.task_detail && detailVisible()) {
+          void pollServerBoard();
+        }
+      });
+
+      document.addEventListener('scroll', (ev) => {
+        if (state.restoringScroll) return;
+        const target = ev && ev.target;
+        if (target && target.dataset) {
+          if (target.dataset.scroll) {
+            state.scroll.set(target.dataset.scroll, target.scrollTop || 0);
+            if (target.dataset.scroll.startsWith('stream/') &&
+                typeof target.scrollHeight === 'number' &&
+                typeof target.clientHeight === 'number') {
+              const dist = target.scrollHeight - (target.scrollTop || 0) - target.clientHeight;
+              if (dist > 24 && state.followTail) state.followTail = false;
+            }
+          }
+          if (target.dataset.activityRun) {
+            state.activityScrollByRun.set(target.dataset.activityRun, target.scrollTop || 0);
+          }
+        }
+        state.lastUserScrollMs = Date.now();
+      }, true);
+
+      document.addEventListener('toggle', () => {
+        notifyInlineHeight();
+      }, true);
+
+      document.addEventListener('keydown', ev => {
+        if ((ev.key === 'Enter' || ev.key === ' ') && ev.target.getAttribute?.('data-action') === 'select-task') {
+          ev.preventDefault();
+          ev.target.click();
         }
       });
 
@@ -1890,15 +2485,10 @@
         }
       }, 1000);
 
-      async function schedulePollLoop() {
-        const anyRunning =
-          state.board && state.board.summary && state.board.summary.running_tasks > 0;
-        const waitMs = anyRunning ? 1500 : 4500;
-        await new Promise((r) => setTimeout(r, waitMs));
-        if (state.connected) {
-          await pollServerBoard();
-        }
-        void schedulePollLoop();
+      function schedulePollLoop() {
+        clearTimeout(state.pollTimer);
+        if (!state.connected) return;
+        state.pollTimer = setTimeout(pollServerBoard, state.board?.summary?.running_tasks ? 1000 : 4500);
       }
 
       async function connectMcpApp() {
@@ -1918,13 +2508,18 @@
             }
             sendRpcNotification('ui/notifications/initialized', {});
             notifyInlineHeight();
-            setTimeout(() => {
-              if (!state.board) void pollServerBoard();
-            }, 150);
+            if (!state.board || (state.selectedTaskId && !state.board.task_detail && detailVisible())) {
+              void pollServerBoard();
+            }
             void schedulePollLoop();
             return;
           } catch {}
         }
+      }
+
+      if (typeof ResizeObserver === 'function') {
+        const rootEl = document.getElementById('root');
+        if (rootEl) new ResizeObserver(() => notifyInlineHeight()).observe(rootEl);
       }
 
       detectAmbientDarkTheme();

@@ -9,10 +9,13 @@ import type {
   NativeHarnessEventClaim,
   ReasoningEffort,
   ReportedStatus,
+  RunActivityItem,
+  RunActivityStatus,
   TokenUsageSummary,
 } from '../types.js';
 import { writeAtomicJson, writeAtomicText } from '../observability/fs-atomic.js';
 import { redactSensitiveText } from '../observability/redact.js';
+import { sanitizeActivityItem } from '../firewall/budgets.js';
 import { buildCodexSpawnCommand, resolveCodexBinary } from './codex-binary.js';
 import {
   classifyExitReason,
@@ -47,6 +50,7 @@ export interface CodexAdapterRunInput {
     reasoningEffort: string | null;
   }) => void;
   onLiveEvent?: (summary: string) => void;
+  onActivity?: (activity: RunActivityItem) => void;
 }
 
 export interface CodexAdapterRunResult {
@@ -63,6 +67,7 @@ export interface CodexAdapterRunResult {
   lastEvent: string | null;
   usage: TokenUsageSummary | null;
   nativeEvents: NativeHarnessEventClaim[];
+  activities: RunActivityItem[];
   stderrSummary: string;
 }
 
@@ -154,7 +159,7 @@ function summarizeCodexLiveEvent(ev: Record<string, unknown>): string | null {
   }
   if (type === 'turn.failed') {
     const errObj = ev.error as Record<string, unknown> | undefined;
-    return `turn.failed: ${String(errObj?.message ?? 'error').slice(0, 110)}`;
+    return `turn.failed: ${String(errObj?.message ?? 'error')}`;
   }
   if (
     (type === 'item.started' || type === 'item.completed') &&
@@ -164,12 +169,12 @@ function summarizeCodexLiveEvent(ev: Record<string, unknown>): string | null {
     const item = ev.item as Record<string, unknown>;
     const itemType = String(item.type ?? '');
     if (itemType === 'command_execution') {
-      const cmd = String(item.command ?? '').replace(/\s+/g, ' ').trim();
+      const cmd = String(item.command ?? '');
       if (item.status === 'declined') {
-        return `declined cmd: ${cmd.slice(0, 100)}`;
+        return `declined cmd: ${cmd}`;
       }
       const prefix = type === 'item.started' ? 'running cmd' : 'ran cmd';
-      return `${prefix}: ${cmd.slice(0, 110)}`;
+      return `${prefix}: ${cmd}`;
     }
     if (itemType === 'mcp_tool_call') {
       const srv = String(item.server ?? 'mcp');
@@ -186,13 +191,13 @@ function summarizeCodexLiveEvent(ev: Record<string, unknown>): string | null {
         : 'file_change';
     }
     if (itemType === 'web_search') {
-      return `web_search: ${String(item.query ?? '').slice(0, 90)}`;
+      return `web_search: ${String(item.query ?? '')}`;
     }
     if (itemType === 'agent_message' && type === 'item.completed') {
       return 'agent_message emitted';
     }
     if (itemType === 'error' && typeof item.message === 'string') {
-      return `notice: ${item.message.replace(/\s+/g, ' ').trim().slice(0, 110)}`;
+      return `notice: ${item.message}`;
     }
   }
   return null;
@@ -234,6 +239,7 @@ export async function runNativeCodexTurn(
   let canceled = false;
   let usage: TokenUsageSummary | null = null;
   const nativeEvents: NativeHarnessEventClaim[] = [];
+  const activities: RunActivityItem[] = [];
   let stderrTail = '';
   let currentPhase = 'starting';
 
@@ -271,15 +277,23 @@ export async function runNativeCodexTurn(
 
   const recordLiveEvent = (rawSummary: string | null) => {
     if (!rawSummary) return;
-    const clean = redactSensitiveText(rawSummary).slice(0, 160);
+    const clean = redactSensitiveText(rawSummary).replace(/\s+/g, ' ').trim().slice(0, 160);
     if (!clean || clean === lastEvent) return;
     lastEvent = clean;
     input.onLiveEvent?.(clean);
   };
 
+  const recordActivity = (kind: RunActivityItem['kind'], label: string, status: RunActivityStatus) => {
+    const activity = sanitizeActivityItem({ at: new Date().toISOString(), kind, label, status });
+    if (!activity) return;
+    activities.push(activity);
+    input.onActivity?.(activity);
+  };
+
   const setPhase = (nextPhase: string | null) => {
     if (nextPhase && nextPhase !== currentPhase) {
       currentPhase = nextPhase;
+      recordActivity('phase', nextPhase, 'info');
       input.onPhaseChanged?.(nextPhase);
     }
   };
@@ -290,21 +304,33 @@ export async function runNativeCodexTurn(
       streamModel = ev.model.trim().slice(0, 80);
       refreshModelInfo();
     }
-    recordLiveEvent(summarizeCodexLiveEvent(ev));
-
-    if (type === 'thread.started' && typeof ev.thread_id === 'string' && ev.thread_id) {
-      threadId = ev.thread_id;
-      input.onThreadStarted?.(ev.thread_id);
-      refreshModelInfo();
+    const item = ev.item && typeof ev.item === 'object'
+      ? ev.item as Record<string, unknown>
+      : null;
+    if (type === 'thread.started' || type === 'turn.started') {
       setPhase('investigating');
+    } else if (item && (type === 'item.started' || type === 'item.updated' || type === 'item.completed')) {
+      setPhase(inferPhaseFromCodexItem(item));
+    }
+    const summary = summarizeCodexLiveEvent(ev);
+    recordLiveEvent(summary);
+
+    if (type === 'thread.started') {
+      recordActivity('notice', 'thread.started', 'started');
+      if (typeof ev.thread_id === 'string' && ev.thread_id) {
+        threadId = ev.thread_id;
+        input.onThreadStarted?.(ev.thread_id);
+        refreshModelInfo();
+      }
       return;
     }
     if (type === 'turn.started') {
+      recordActivity('turn', type, 'started');
       refreshModelInfo();
-      setPhase('investigating');
       return;
     }
     if (type === 'turn.completed') {
+      recordActivity('turn', type, 'completed');
       turnCompleted = true;
       if (ev.usage && typeof ev.usage === 'object') {
         usage = ev.usage as TokenUsageSummary;
@@ -312,22 +338,48 @@ export async function runNativeCodexTurn(
       return;
     }
     if (type === 'turn.failed') {
+      recordActivity('turn', summary ?? type, 'failed');
       turnFailed = true;
       const errObj = ev.error as Record<string, unknown> | undefined;
       recordNativeEvent(String(errObj?.message ?? 'Codex turn.failed event'));
       return;
     }
     if (type === 'error') {
-      recordNativeEvent(String(ev.message ?? 'Codex stream error'));
+      const message = String(ev.message ?? 'Codex stream error');
+      recordActivity('notice', message, 'failed');
+      recordNativeEvent(message);
       return;
     }
     if (
       (type === 'item.started' || type === 'item.updated' || type === 'item.completed') &&
-      ev.item &&
-      typeof ev.item === 'object'
+      item
     ) {
-      const item = ev.item as Record<string, unknown>;
-      setPhase(inferPhaseFromCodexItem(item));
+      if (type !== 'item.updated') {
+        let status: RunActivityStatus = type === 'item.started' ? 'started' : 'completed';
+        if (item.status === 'declined') status = 'declined';
+        else if (item.status === 'canceled' || item.status === 'cancelled') status = 'canceled';
+        else if (item.type === 'error' || item.status === 'failed' ||
+          (typeof item.exit_code === 'number' && item.exit_code !== 0)) status = 'failed';
+
+        switch (item.type) {
+          case 'command_execution':
+            recordActivity('command', summary ?? 'command_execution', status);
+            break;
+          case 'mcp_tool_call':
+          case 'web_search':
+            recordActivity('tool', summary ?? item.type, status);
+            break;
+          case 'file_change':
+            recordActivity('file_change', summary ?? item.type, status);
+            break;
+          case 'agent_message':
+            if (type === 'item.completed') recordActivity('notice', 'agent_message emitted', status);
+            break;
+          case 'error':
+            recordActivity('notice', summary ?? 'error', status);
+            break;
+        }
+      }
       if (item.type === 'agent_message' && typeof item.text === 'string') {
         lastAgentMessage = item.text;
       }
@@ -526,6 +578,7 @@ export async function runNativeCodexTurn(
       lastEvent,
       usage,
       nativeEvents,
+      activities,
       stderrSummary: cleanedStderr.slice(0, 600),
     };
   } finally {

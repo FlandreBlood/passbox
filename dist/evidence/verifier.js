@@ -318,7 +318,12 @@ export async function runVerificationCommands(workspaceRoot, commands, options) 
             aborted = true;
             break;
         }
-        const step = await runSingleVerifyCommand(workspaceRoot, commands[i], i, options);
+        const command = commands[i];
+        options?.onCommandEvent?.(command.argv, i, 'started');
+        const step = await runSingleVerifyCommand(workspaceRoot, command, i, options);
+        const { exit_code, timed_out, spawn_error } = step.result;
+        const passed = exit_code === 0 && !timed_out && !spawn_error && !step.aborted;
+        options?.onCommandEvent?.(command.argv, i, passed ? 'completed' : 'failed');
         results.push(step.result);
         if (step.fullLogBlock)
             logBlocks.push(step.fullLogBlock);

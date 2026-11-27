@@ -5,10 +5,10 @@
 | Tool | 参数 / Arguments | 行为说明 / Behavior |
 |---|---|---|
 | `passbox_delegate` | `objective`, `workspace`, `model?`, `reasoning_effort?`, `caller?`, `contract?` | 不改动 `.git/index` 采集 `T0` Git 快照，无弹窗启动独立后台 Codex 运行并立即返回 `task_id`、`run_id` 与生效模型信息；自动在对话挂载实时状态卡。`workspace` 必须为绝对路径。 |
-| `passbox_collect` | `task_id`, `since_revision?`, `wait_seconds?`, `budget?` | 事件等待执行完成（默认 `60s`，上限 `300s`，等待窗口超时绝不终止后台运行），返回 `T0 -> Tk` 总账、`since_revision` 增量、三态分离状态、精确 `exit_reason`、生效 `model` 与 `unverified_claims`；无新版本时返回 `unchanged: true`。 |
+| `passbox_collect` | `task_id`, `since_revision?`, `wait_seconds?`, `budget?` | 事件等待执行完成（默认 `600s`，上限 `1800s`，等待窗口超时绝不终止后台运行；支持标准 `_meta.progressToken` 进度通知），返回 `T0 -> Tk` 总账、`since_revision` 增量、三态分离状态、精确 `exit_reason`、生效 `model` 与自适应预算的 `unverified_claims`；无新版本时返回 `unchanged: true`。 |
 | `passbox_steer` | `task_id`, `instruction`, `reset_context?`, `model?`, `reasoning_effort?`, `caller?` | 默认续接原 Codex 线程（若 CLI 正在运行则按 FIFO 排队等待下轮执行）；`reset_context: true` 则先停止当前写进程并开启干净的新线程。 |
 | `passbox_status` | `task_id?`, `include_board?` | 返回精简状态（`<= 512 B`），同时作为 Antigravity 侧边栏（`aux_pane`）与全局栏（`global`）的 **Passbox 状态面板**入口。模型不应高频轮询此工具。 |
-| `passbox_recall` | `recall_id`, `cursor?`, `limit?` | 对不可变归档产物（`diff`、`ledger_diff`、`file_diff`、`exec_diff`、`verify_side_effect_diff`、`range_diff`、`logs`、`raw_trace`）进行游标分页召回（默认 `<= 8 KiB`）。 |
+| `passbox_recall` | `recall_id`, `cursor?`, `limit?` | 对不可变归档产物（`report`、`diff`、`ledger_diff`、`file_diff`、`exec_diff`、`verify_side_effect_diff`、`range_diff`、`logs`、`raw_trace`）进行游标分页召回（默认 `<= 8 KiB`）。 |
 | `passbox_cancel` | `task_id` | 终止当前活跃进程树（包含验证子进程）、等待真实退出，并保留已采集的工作区证据与版本归档（亦可在状态面板中点击二次确认取消）。 |
 
 ## 2. 模型解析与退出原因语义 / Model Resolution & Exit Reasons
@@ -61,6 +61,9 @@
 
 - **仅使用结构化 `argv` / Structured `argv` only**：`verify_commands` 默认不经过 Shell，直接在 Passbox MCP 宿主环境中运行（无自建 OS 沙箱；若希望在 Antigravity 自身受控终端中跑测试，可省略 `verify_commands` 或设置 `PASSBOX_DISABLE_VERIFY_COMMANDS=1`）。切勿将日志或代码注释中的非信任命令复制进 `verify_commands`。
 - **观测信号（`unexpected_files`、`guard_signals`、行数变化）/ Observational signals**：仅作为引导代码阅读的描述性信号，绝不能仅凭行数或防御写法计数自动打回补丁。
+- **只读审查 vs 代码修改任务的预算与取证 / Read-Only Audits vs Code-Editing Tasks**：
+  - 只读审查/日志排查（`diff_preview` 为空）时，`passbox_collect` 会自动将原本预留给代码 Diff 预览的预算让渡给 `unverified_claims`，并额外生成独立的 `recall_ids.report`（脱敏完整报告 JSON）。若 `unverified_claims.claims_truncated === true`，通过 `passbox_recall({ recall_id: unverified_claims.report_recall_id })` 即可分页取回完整报告，无需拉取 `raw_trace`。
+  - 代码修改任务通过 `observations` + `diff_preview` 评估影响范围；若 `verify_commands` 通过且改动清晰，抽查关键文件或按需 `passbox_recall` 单个 `file.recall_id` 即可，避免全量重复读文件。
 
 ## 4. 选择性干预决策树 / Selective Intervention Decision Tree
 

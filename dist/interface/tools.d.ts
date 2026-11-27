@@ -22,5 +22,9 @@ export declare class PassboxToolDispatcher {
     readonly sessionManager: SessionManager;
     readonly firewall: EvidenceFirewall;
     constructor(explicitDataDir?: string);
-    callTool(toolName: string, rawArgs?: Record<string, unknown>, signal?: AbortSignal): Promise<McpToolCallResult>;
+    callTool(toolName: string, rawArgs?: Record<string, unknown>, signal?: AbortSignal, onProgress?: (info: {
+        progress: number;
+        total?: number;
+        message?: string;
+    }) => void): Promise<McpToolCallResult>;
 }

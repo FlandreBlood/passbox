@@ -1,4 +1,6 @@
 export {
+  boundActivitySummary,
+  sanitizeActivityItem,
   DEFAULT_BUDGETS,
   MCP_ENVELOPE_OVERHEAD_BYTES,
   mcpWireSerializedBytes,

@@ -41,6 +41,9 @@ async function runDetachedWorkerMain() {
     process.on('SIGINT', onSignal);
     let lastEventFlushMs = 0;
     try {
+        archive.appendRunActivity(taskId, runId, {
+            at: new Date().toISOString(), kind: 'phase', label: 'starting', status: 'started',
+        });
         checkCancelFlag();
         const adapterResult = await runNativeCodexTurn({
             executionWorkspace: spec.execution_workspace,
@@ -85,6 +88,9 @@ async function runDetachedWorkerMain() {
                     if (run && run.status === 'running')
                         run.phase = phase;
                 });
+            },
+            onActivity(activity) {
+                archive.appendRunActivity(taskId, runId, activity);
             },
             onLiveEvent(summary) {
                 const nowMs = Date.now();

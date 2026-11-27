@@ -6,7 +6,7 @@ import type {
 } from '../types.js';
 import { DEFAULT_BUDGETS, EvidenceFirewall } from '../firewall/index.js';
 import { ArchiveStore } from '../observability/index.js';
-import { SessionManager } from '../session/index.js';
+import { DEFAULT_COLLECT_WAIT_SECONDS, SessionManager } from '../session/index.js';
 import { PASSBOX_BOARD_RESOURCE_URI } from './board-ui.js';
 
 export interface McpToolDefinition {
@@ -54,6 +54,7 @@ export const PASSBOX_MCP_TOOLS: McpToolDefinition[] = [
       additionalProperties: false,
       required: ['objective', 'workspace'],
       properties: {
+        title: { type: 'string', description: '简短任务标题。Short human-readable task title.' },
         objective: {
           type: 'string',
           description: '委托给 Codex 的完整业务目标（建议与用户语言一致）。Cohesive business objective to delegate to Codex.',
@@ -155,8 +156,10 @@ export const PASSBOX_MCP_TOOLS: McpToolDefinition[] = [
         wait_seconds: {
           type: 'number',
           minimum: 0,
-          maximum: 300,
-          description: '事件等待超时秒数（默认 60；通信超时不会终止后台任务）。Event-driven wait timeout in seconds (default 60). Transport timeout never kills the task.',
+          maximum: 1800,
+          description:
+            '事件等待超时秒数（默认 600，上限 1800；通信超时不会终止后台任务）。' +
+            'Event-driven wait timeout in seconds (default 600, max 1800). Transport timeout never kills the task.',
         },
         budget: {
           type: 'object',
@@ -235,6 +238,8 @@ export const PASSBOX_MCP_TOOLS: McpToolDefinition[] = [
           type: 'string',
           description: '要查询的任务 ID（侧边栏/全局入口无参启动时可省略）。Optional Task ID to inspect.',
         },
+        include_detail: { type: 'boolean', description: 'Load prompt and process detail for the UI.' },
+        run_id: { type: 'string', description: 'Run to inspect in the UI (defaults to latest).' },
         include_board: {
           type: 'boolean',
           description: '仅用于状态面板 UI 刷新结构化多任务快照（模型文本输出仍保持 <= 512 B）。Attach structured board data for UI rendering.',
@@ -246,8 +251,8 @@ export const PASSBOX_MCP_TOOLS: McpToolDefinition[] = [
     name: 'passbox_recall',
     title: 'Passbox Recall',
     description:
-      '对绑定特定 Recall ID 与修订版本的不可变归档产物（diff、ledger_diff、file_diff、exec_diff、verify_side_effect_diff、range_diff、logs、raw_trace）进行游标分页读取（默认 <= 8 KiB）。' +
-      'Cursor-paginate an immutable archived artifact (diff, ledger_diff, file_diff, logs, or raw_trace) ' +
+      '对绑定特定 Recall ID 与修订版本的不可变归档产物（report、diff、ledger_diff、file_diff、exec_diff、verify_side_effect_diff、range_diff、logs、raw_trace）进行游标分页读取（默认 <= 8 KiB）。' +
+      'Cursor-paginate an immutable archived artifact (report, diff, ledger_diff, file_diff, logs, or raw_trace) ' +
       'bound to a specific Recall ID and revision (<= 8 KiB default page).',
     inputSchema: {
       type: 'object',
@@ -305,7 +310,8 @@ export class PassboxToolDispatcher {
   async callTool(
     toolName: string,
     rawArgs: Record<string, unknown> = {},
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    onProgress?: (info: { progress: number; total?: number; message?: string }) => void
   ): Promise<McpToolCallResult> {
     const taskIdHint = typeof rawArgs.task_id === 'string' && rawArgs.task_id.trim() ? rawArgs.task_id.trim() : null;
     const isStatusCall = toolName === 'passbox_status';
@@ -315,6 +321,7 @@ export class PassboxToolDispatcher {
       switch (toolName) {
         case 'passbox_delegate': {
           const res = await this.sessionManager.delegate({
+            title: typeof rawArgs.title === 'string' ? rawArgs.title : undefined,
             objective: String(rawArgs.objective ?? ''),
             workspace: String(rawArgs.workspace ?? ''),
             contract: rawArgs.contract as TaskContract | undefined,
@@ -336,7 +343,9 @@ export class PassboxToolDispatcher {
               ? Math.floor(rawArgs.since_revision)
               : undefined;
           const waitSeconds =
-            typeof rawArgs.wait_seconds === 'number' ? rawArgs.wait_seconds : 60;
+            typeof rawArgs.wait_seconds === 'number'
+              ? rawArgs.wait_seconds
+              : DEFAULT_COLLECT_WAIT_SECONDS;
           const budget = rawArgs.budget as BudgetOptions | undefined;
 
           const waited = await this.sessionManager.waitForCollect({
@@ -344,6 +353,19 @@ export class PassboxToolDispatcher {
             sinceRevision,
             waitSeconds,
             signal,
+            ...(onProgress
+              ? {
+                  onProgress: (p) => {
+                    onProgress({
+                      progress: p.elapsedSeconds,
+                      total: p.totalSeconds,
+                      message: `phase=${p.phase} (${p.elapsedSeconds}s/${p.totalSeconds}s)${
+                        p.lastEvent ? ` · ${p.lastEvent.slice(0, 80)}` : ''
+                      }`,
+                    });
+                  },
+                }
+              : {}),
           });
 
           const text = this.firewall.formatCollectResponse({
@@ -374,7 +396,8 @@ export class PassboxToolDispatcher {
 
         case 'passbox_status': {
           const includeBoard = Boolean(rawArgs.include_board);
-          if (taskIdHint && !includeBoard) {
+          const includeDetail = rawArgs.include_detail === true;
+          if (taskIdHint && !includeBoard && !includeDetail) {
             const { task, activeRun } = await this.sessionManager.getAndReconcileTask(taskIdHint);
             const text = this.firewall.formatStatusResponse(task, activeRun);
             return { content: [{ type: 'text', text }] };
@@ -383,6 +406,8 @@ export class PassboxToolDispatcher {
           // Entrypoint launch (`{}`) or UI board refresh (`include_board: true`)
           const board = await this.sessionManager.getBoardSnapshot({
             focusTaskId: taskIdHint ?? undefined,
+            includeDetail,
+            runId: typeof rawArgs.run_id === 'string' ? rawArgs.run_id : undefined,
           });
 
           let text: string;

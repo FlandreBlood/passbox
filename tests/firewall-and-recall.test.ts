@@ -5,6 +5,8 @@ import os from 'node:os';
 import path from 'node:path';
 import {
   DEFAULT_BUDGETS,
+  boundActivitySummary,
+  sanitizeActivityItem,
   EvidenceFirewall,
   mcpWireSerializedBytes,
   utf8ByteLength,
@@ -13,8 +15,120 @@ import { ArchiveStore } from '../src/observability/index.js';
 import { createTempGitRepo } from './helpers/temp-git.js';
 import { captureWorkspaceSnapshot, computeTreeDiff } from '../src/evidence/index.js';
 import type { ChangedFileEntry, TaskRecord } from '../src/types.js';
+import type { PassboxBoardSnapshot } from '../src/session/index.js';
 
 describe('M4 Evidence Firewall & M6 Recall Pagination Budgets', () => {
+  it('redacts activity labels, keeps the newest whole events and accumulates omitted counts', () => {
+    const at = '2026-11-27T01:02:03.000Z';
+    const activity = { at, kind: 'command', status: 'started' } as const;
+    const labels = [
+      'export MY_API_KEY=test-api MY_SECRET_KEY="test secret" PASSWORD=test\\ value AUTH_TOKEN=auth-24',
+      'curl --token=tok-24 --api-key=key-24 -H "Authorization: Basic dXNlcjpwYXNz"',
+      'curl https://test-user:test-pass@example.invalid/path',
+      'verify[1]: tool "--password=test secret suffix"',
+      'echo \n\t multiline',
+    ];
+    for (const label of labels) {
+      const clean = sanitizeActivityItem({ ...activity, label, args: ['ignore'], output: 'ignore' })!;
+      assert.deepEqual(Object.keys(clean).sort(), ['at', 'kind', 'label', 'status']);
+      assert.doesNotMatch(clean.label, /test[- ]|auth-24|tok-24|key-24|dXNlcjpwYXNz|[\r\n\t]/);
+      assert.deepEqual(sanitizeActivityItem(clean), clean);
+    }
+    const long = sanitizeActivityItem({ ...activity, label: '中😀'.repeat(100) })!;
+    assert.ok(utf8ByteLength(long.label) <= 120);
+    assert.doesNotMatch(long.label, /\uFFFD/);
+
+    const items = Array.from({ length: 15 }, (_, i) => ({
+      ...activity,
+      at: new Date(Date.parse(at) + i * 1000).toISOString(),
+      label: i + ' ' + '"😀中\\'.repeat(35),
+      extra: 'restricted',
+    }));
+    const summary = boundActivitySummary([...items].reverse());
+    assert.ok(summary.omitted_count > 0);
+    assert.ok(utf8ByteLength(JSON.stringify(summary)) <= DEFAULT_BUDGETS.summaryBytes);
+    assert.deepEqual(summary.activities, items.slice(summary.omitted_count).map(sanitizeActivityItem));
+    const oneMore = {
+      activities: [sanitizeActivityItem(items[summary.omitted_count - 1]), ...summary.activities],
+      omitted_count: summary.omitted_count - 1,
+    };
+    assert.ok(utf8ByteLength(JSON.stringify(oneMore)) > DEFAULT_BUDGETS.summaryBytes);
+
+    const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'passbox-activities-'));
+    try {
+      const archive = new ArchiveStore(dataDir);
+      archive.appendRunActivity('pb_test', 'run_1', items[1]);
+      archive.appendRunActivity('pb_test', 'run_1', items[0]);
+      const { activitiesFile } = archive.runPaths('pb_test', 'run_1');
+      fs.appendFileSync(activitiesFile, '{"incomplete":');
+      const first = items.slice(0, 2).map(sanitizeActivityItem);
+      assert.deepEqual(archive.readRunActivities('pb_test', 'run_1'), first);
+      archive.appendRunActivity('pb_test', 'run_1', items[2]);
+      assert.deepEqual(archive.readRunActivities('pb_test', 'run_1'), items.slice(0, 3).map(sanitizeActivityItem));
+
+      const oversized = {
+        tasks: [{
+          runs: [{
+            activities: summary.activities,
+            activities_omitted_count: summary.omitted_count,
+            delta_files: [],
+            unverified_blockers: Array.from({ length: 10 }, () => ({ claim: 'x'.repeat(30_000) })),
+            unverified_counter_evidence: [],
+          }],
+        }],
+      } as unknown as PassboxBoardSnapshot;
+      const firewall = new EvidenceFirewall(archive);
+      const clamped = firewall.boundBoardStructuredContent(oversized);
+      assert.equal(clamped.board_clamped, true);
+      const run = (clamped as unknown as PassboxBoardSnapshot).tasks[0].runs[0];
+      const clampedSummary = { activities: run.activities, omitted_count: run.activities_omitted_count };
+      assert.ok(utf8ByteLength(JSON.stringify(clampedSummary)) <= 512);
+      assert.ok(run.activities_omitted_count > summary.omitted_count);
+      assert.deepEqual(run.activities, items.slice(run.activities_omitted_count).map(sanitizeActivityItem));
+    } finally {
+      fs.rmSync(dataDir, { recursive: true, force: true });
+    }
+  });
+
+  it('bounds escaped detail payloads and retains the selected run and newest process entries', () => {
+    const archiveDir = fs.mkdtempSync(path.join(os.tmpdir(), 'passbox-board-budget-'));
+    try {
+      const firewall = new EvidenceFirewall(new ArchiveStore(archiveDir));
+      const entries = Array.from({ length: 120 }, (_, i) => ({
+        key: 'event-' + i, kind: 'agent_message', status: 'completed' as const, at: null, text: '中'.repeat(200),
+      }));
+      const board: PassboxBoardSnapshot = {
+        generated_at: new Date().toISOString(), focus_task_id: 'pb_1', tasks: [],
+        default_codex_model: { resolved_model: null, model_source: 'codex_cli_default', reasoning_effort: null },
+        summary: { total_tasks: 1, running_tasks: 0, idle_tasks: 1, failed_or_interrupted_tasks: 0 },
+        task_detail: {
+          task_id: 'pb_1', title: 'Task', objective_full: '\0'.repeat(29000), objective_truncated: false,
+          contract_summary: { workspace_mode: 'snapshot' }, selected_run_id: 'run_1',
+          runs_prompts: [{ run_id: 'run_1', sequence: 1, mode: 'initial', instruction_full: 'guidance', instruction_truncated: false }],
+          rendered_prompt: '"\\'.repeat(12000), rendered_prompt_truncated: false,
+          selected_run_live: { trust: 'untrusted_artifact_data', entries, omitted_count: 20,
+            truncated: true, stderr_tail: 'diagnostic', stderr_truncated: false },
+        },
+      };
+      const clamped = firewall.boundBoardStructuredContent(board) as unknown as PassboxBoardSnapshot;
+      assert.ok(Buffer.byteLength(JSON.stringify(clamped)) <= 240 * 1024);
+      assert.ok(clamped.task_detail?.rendered_prompt_truncated);
+      const stream = clamped.task_detail.selected_run_live!;
+      assert.ok(stream.truncated && stream.omitted_count > 20);
+      assert.deepEqual(stream.entries, entries.slice(stream.omitted_count - 20));
+      assert.equal(stream.entries.at(-1)?.key, 'event-119');
+      assert.equal(board.task_detail!.rendered_prompt.length, 24000);
+      assert.equal(entries.length, 120);
+      board.task_detail!.contract_summary.acceptance = ['😀'.repeat(125000)];
+      const extreme = firewall.boundBoardStructuredContent(board) as unknown as PassboxBoardSnapshot;
+      assert.ok(Buffer.byteLength(JSON.stringify(extreme)) <= 240 * 1024);
+      assert.ok(extreme.task_detail?.contract_truncated);
+      assert.equal(extreme.task_detail.selected_run_id, 'run_1');
+    } finally {
+      fs.rmSync(archiveDir, { recursive: true, force: true });
+    }
+  });
+
   it('enforces strict byte caps on status (<=512B), collect (<=32KiB & <=300 lines), errors, and multi-byte UTF-8 recall pages (<=8KiB)', () => {
     const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'passbox-fw-'));
     try {
@@ -450,6 +564,184 @@ describe('M4 Evidence Firewall & M6 Recall Pagination Budgets', () => {
       }
     } finally {
       cleanup();
+      fs.rmSync(dataDir, { recursive: true, force: true });
+    }
+  });
+
+  it('allocates adaptive unverified_claims budget for zero-diff reviews and exposes redacted report recall_id', () => {
+    const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'passbox-report-recall-'));
+    try {
+      const archive = new ArchiveStore(dataDir);
+      const firewall = new EvidenceFirewall(archive);
+
+      // Case A: zero-diff read-only review with 12 rich Chinese blockers + 5 counter_evidence (~7.5 KiB total)
+      const blockersA = Array.from({ length: 12 }, (_, idx) => ({
+        claim: `P1-${idx + 1}｜当上游并发写入账本时未确认终态即返回成功，导致状态机与磁盘记录不一致：${'细节说明'.repeat(28)}`,
+        evidence: `apps/workbench/src/pims-native.ts:${100 + idx * 10}-${110 + idx * 10}`,
+      }));
+      const counterA = Array.from({ length: 5 }, (_, idx) => ({
+        claim: `已核实行为 ${idx + 1}：上游校验路径在进入 worker 前已完成参数归一化与路径白名单检查。`,
+        evidence: `apps/dsh/src/pims-jobs.ts:${40 + idx * 5}`,
+      }));
+
+      const pubA = archive.publishImmutableRevision({
+        taskId: 'pb_review_a',
+        runId: 'run_1',
+        revision: 1,
+        ledgerPatch: '',
+        deltaPatch: '',
+        verifyLogs: '',
+        rawTraceSourceFile: '',
+        metadataWithoutRecall: {
+          task_id: 'pb_review_a',
+          run_id: 'run_1',
+          revision: 1,
+          published_at: new Date().toISOString(),
+          from_tree_oid: '0'.repeat(40),
+          exec_tree_oid: '0'.repeat(40),
+          final_tree_oid: '0'.repeat(40),
+          baseline_tree_oid: '0'.repeat(40),
+          execution_status: 'succeeded',
+          reported_status: 'completed',
+          verification_status: 'not_run',
+          ledger_totals: { files_changed: 0, insertions: 0, deletions: 0, net_lines: 0 },
+          ledger_files: [],
+          delta_totals: { files_changed: 0, insertions: 0, deletions: 0, net_lines: 0 },
+          delta_files: [],
+          unexpected_files: [],
+          guard_signals: {
+            try_catch_added: 0,
+            nullish_or_type_guards_added: 0,
+            fallback_defaults_added: 0,
+            early_guard_returns_added: 0,
+            note: 'heuristic',
+          },
+          external_drift_files: [],
+          verify_side_effect_files: [],
+          verify_results: [],
+          unverified_blockers: blockersA,
+          unverified_counter_evidence: counterA,
+          native_events: [],
+          snapshot_notes: [],
+          usage: null,
+        },
+      });
+
+      assert.ok(pubA.recall_ids.report);
+      const taskA: TaskRecord = {
+        task_id: 'pb_review_a',
+        objective: 'Read-only review',
+        requested_workspace: '/repo',
+        repo_root: '/repo',
+        execution_workspace: '/repo',
+        workspace_mode: 'snapshot',
+        contract: {},
+        state: 'idle',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        baseline_snapshot: {
+          tree_oid: '0'.repeat(40),
+          head_oid: '0'.repeat(40),
+          captured_at: new Date().toISOString(),
+          dirty_entry_count: 0,
+          scope_notes: [],
+        },
+        latest_tree_oid: '0'.repeat(40),
+        current_revision: 1,
+        active_run_id: null,
+        active_thread_id: 'thread_a',
+        archived_thread_ids: [],
+        queued_steer: null,
+        runs: [],
+      };
+
+      const collectARaw = firewall.formatCollectResponse({ task: taskA, activeRun: null, waitedMs: 1 });
+      assert.ok(mcpWireSerializedBytes(collectARaw) <= DEFAULT_BUDGETS.hardMaxBytes);
+      const collectA = JSON.parse(collectARaw);
+      assert.equal(collectA.unverified_claims.verified, false);
+      assert.equal(collectA.unverified_claims.claims_truncated, false);
+      assert.equal(collectA.unverified_claims.blockers.length, 12);
+      assert.equal(collectA.unverified_claims.counter_evidence.length, 5);
+      assert.equal(collectA.unverified_claims.blockers[0].claim, blockersA[0].claim);
+      assert.equal(collectA.artifacts.recall_ids.report, pubA.recall_ids.report);
+
+      const reportPageA = JSON.parse(firewall.formatRecallResponse(pubA.recall_ids.report!));
+      assert.equal(reportPageA.trust, 'untrusted_artifact_data');
+      assert.equal(reportPageA.kind, 'report');
+
+      // Case B: oversized report (> 22 KiB) with secret tokens must truncate claims safely and expose report_recall_id
+      const blockersB = Array.from({ length: 24 }, (_, idx) => ({
+        claim: `Finding ${idx + 1} with Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.secretpayload_${idx}: ${'detail '.repeat(140)}`,
+        evidence: `src/module_${idx}.ts:${idx + 10}`,
+      }));
+      const pubB = archive.publishImmutableRevision({
+        taskId: 'pb_review_b',
+        runId: 'run_1',
+        revision: 1,
+        ledgerPatch: '',
+        deltaPatch: '',
+        verifyLogs: '',
+        rawTraceSourceFile: '',
+        metadataWithoutRecall: {
+          task_id: 'pb_review_b',
+          run_id: 'run_1',
+          revision: 1,
+          published_at: new Date().toISOString(),
+          from_tree_oid: '0'.repeat(40),
+          exec_tree_oid: '0'.repeat(40),
+          final_tree_oid: '0'.repeat(40),
+          baseline_tree_oid: '0'.repeat(40),
+          execution_status: 'succeeded',
+          reported_status: 'partial',
+          verification_status: 'not_run',
+          ledger_totals: { files_changed: 0, insertions: 0, deletions: 0, net_lines: 0 },
+          ledger_files: [],
+          delta_totals: { files_changed: 0, insertions: 0, deletions: 0, net_lines: 0 },
+          delta_files: [],
+          unexpected_files: [],
+          guard_signals: {
+            try_catch_added: 0,
+            nullish_or_type_guards_added: 0,
+            fallback_defaults_added: 0,
+            early_guard_returns_added: 0,
+            note: 'heuristic',
+          },
+          external_drift_files: [],
+          verify_side_effect_files: [],
+          verify_results: [],
+          unverified_blockers: blockersB,
+          unverified_counter_evidence: [{ claim: 'Counter note sk-testsecretkey1234567890abcdef', evidence: 'src/ok.ts:1' }],
+          native_events: [],
+          snapshot_notes: [],
+          usage: null,
+        },
+      });
+      const taskB: TaskRecord = { ...taskA, task_id: 'pb_review_b' };
+      const collectBRaw = firewall.formatCollectResponse({ task: taskB, activeRun: null, waitedMs: 1 });
+      assert.ok(mcpWireSerializedBytes(collectBRaw) <= DEFAULT_BUDGETS.hardMaxBytes);
+      const collectB = JSON.parse(collectBRaw);
+      assert.equal(collectB.unverified_claims.claims_truncated, true);
+      assert.equal(collectB.unverified_claims.blockers_total, 24);
+      assert.equal(collectB.unverified_claims.report_recall_id, pubB.recall_ids.report);
+      assert.ok(!collectBRaw.includes('secretpayload'));
+
+      let rCursor: string | undefined;
+      let fullReportText = '';
+      for (;;) {
+        const pageJson = firewall.formatRecallResponse(pubB.recall_ids.report!, rCursor);
+        assert.ok(mcpWireSerializedBytes(pageJson) <= DEFAULT_BUDGETS.recallBytes);
+        const page = JSON.parse(pageJson);
+        fullReportText += page.content;
+        if (!page.has_more) break;
+        rCursor = page.next_cursor;
+      }
+      assert.ok(!fullReportText.includes('secretpayload'));
+      assert.ok(!fullReportText.includes('sk-testsecretkey1234567890abcdef'));
+      const parsedFull = JSON.parse(fullReportText);
+      assert.equal(parsedFull.verified, false);
+      assert.equal(parsedFull.blockers.length, 24);
+      assert.equal(parsedFull.counter_evidence.length, 1);
+    } finally {
       fs.rmSync(dataDir, { recursive: true, force: true });
     }
   });

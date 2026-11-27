@@ -11,6 +11,9 @@ export interface VerificationRunOptions {
   signal?: AbortSignal;
   onChildSpawned?: (pid: number | null) => void;
   logFilePath?: string;
+  onCommandEvent?: (
+    argv: string[], index: number, status: 'started' | 'completed' | 'failed'
+  ) => void;
 }
 
 const MAX_VERIFY_LOG_BYTES = 8 * 1024 * 1024;
@@ -359,7 +362,12 @@ export async function runVerificationCommands(
       aborted = true;
       break;
     }
-    const step = await runSingleVerifyCommand(workspaceRoot, commands[i], i, options);
+    const command = commands[i];
+    options?.onCommandEvent?.(command.argv, i, 'started');
+    const step = await runSingleVerifyCommand(workspaceRoot, command, i, options);
+    const { exit_code, timed_out, spawn_error } = step.result;
+    const passed = exit_code === 0 && !timed_out && !spawn_error && !step.aborted;
+    options?.onCommandEvent?.(command.argv, i, passed ? 'completed' : 'failed');
     results.push(step.result);
     if (step.fullLogBlock) logBlocks.push(step.fullLogBlock);
     if (step.truncated) truncated = true;

@@ -1,6 +1,7 @@
 import type {
   BudgetOptions,
   ChangedFileEntry,
+  ClaimItem,
   RevisionMetadata,
   RunRecord,
   TaskRecord,
@@ -12,6 +13,7 @@ import { redactSensitiveText } from '../observability/redact.js';
 import type { PassboxBoardSnapshot } from '../session/session-manager.js';
 import {
   DEFAULT_BUDGETS,
+  boundActivitySummary,
   mcpWireSerializedBytes,
   resolveBudgets,
   serializeWithinBudget,
@@ -30,6 +32,147 @@ function compactFileList(
   return {
     items: files.slice(0, maxItems),
     omittedCount: files.length - maxItems,
+  };
+}
+
+function packClaimList(
+  items: ClaimItem[],
+  listBudgetBytes: number,
+  maxItems: number,
+  maxClaimBytes: number,
+  maxEvidenceBytes: number
+): {
+  packed: Array<{ claim: string; evidence: string | null }>;
+  usedBytes: number;
+  truncated: boolean;
+} {
+  const packed: Array<{ claim: string; evidence: string | null }> = [];
+  let usedBytes = 2; // "[]"
+  let truncated = items.length > maxItems;
+  const limitCount = Math.min(items.length, maxItems);
+
+  for (let i = 0; i < limitCount; i++) {
+    const remaining = listBudgetBytes - usedBytes - (packed.length > 0 ? 1 : 0);
+    if (remaining < 120) {
+      truncated = true;
+      break;
+    }
+    const raw = items[i];
+    const fullCandidate = { claim: raw.claim, evidence: raw.evidence ?? null };
+    const fullEntryBytes = utf8ByteLength(JSON.stringify(fullCandidate)) + (packed.length > 0 ? 1 : 0);
+    const fullClaimOk = utf8ByteLength(raw.claim) <= maxClaimBytes;
+    const fullEvOk = !raw.evidence || utf8ByteLength(raw.evidence) <= maxEvidenceBytes;
+
+    let candidate: { claim: string; evidence: string | null };
+    let entryBytes: number;
+    if (fullClaimOk && fullEvOk && usedBytes + fullEntryBytes <= listBudgetBytes) {
+      candidate = fullCandidate;
+      entryBytes = fullEntryBytes;
+    } else {
+      const overhead = 36;
+      const claimCap = Math.min(
+        maxClaimBytes,
+        Math.max(80, remaining - overhead - (raw.evidence ? 40 : 0))
+      );
+      const claimRes = truncateUtf8ByBytes(raw.claim, claimCap);
+      let evidenceVal: string | null = null;
+      if (raw.evidence) {
+        const afterClaimEst = remaining - overhead - utf8ByteLength(claimRes.text);
+        if (afterClaimEst >= 24) {
+          const evCap = Math.min(maxEvidenceBytes, afterClaimEst);
+          const evRes = truncateUtf8ByBytes(raw.evidence, evCap);
+          evidenceVal = evRes.text;
+          if (evRes.truncated) truncated = true;
+        } else {
+          truncated = true;
+        }
+      }
+      if (claimRes.truncated) truncated = true;
+      candidate = { claim: claimRes.text, evidence: evidenceVal };
+      entryBytes = utf8ByteLength(JSON.stringify(candidate)) + (packed.length > 0 ? 1 : 0);
+      if (usedBytes + entryBytes > listBudgetBytes && packed.length > 0) {
+        truncated = true;
+        break;
+      }
+    }
+    packed.push(candidate);
+    usedBytes += entryBytes;
+  }
+
+  return { packed, usedBytes, truncated };
+}
+
+function buildBoundedClaims(params: {
+  latestMeta: RevisionMetadata;
+  claimsBudgetBytes: number;
+  maxItemsPerList: number;
+  maxClaimBytes: number;
+  maxEvidenceBytes: number;
+}): Record<string, unknown> {
+  const { latestMeta, claimsBudgetBytes, maxItemsPerList, maxClaimBytes, maxEvidenceBytes } = params;
+  const rawBlockers = latestMeta.unverified_blockers;
+  const rawCounter = latestMeta.unverified_counter_evidence;
+
+  const rawBlockersBytes = utf8ByteLength(JSON.stringify(rawBlockers));
+  const rawCounterBytes = utf8ByteLength(JSON.stringify(rawCounter));
+
+  let blockersBudget = 0;
+  let counterBudget = 0;
+  if (rawBlockers.length === 0) {
+    counterBudget = claimsBudgetBytes;
+  } else if (rawCounter.length === 0) {
+    blockersBudget = claimsBudgetBytes;
+  } else {
+    const floorEach = Math.floor(claimsBudgetBytes * 0.3);
+    const totalRaw = Math.max(1, rawBlockersBytes + rawCounterBytes);
+    const propB = Math.floor((claimsBudgetBytes * rawBlockersBytes) / totalRaw);
+    blockersBudget = Math.max(floorEach, Math.min(claimsBudgetBytes - floorEach, propB));
+    counterBudget = claimsBudgetBytes - blockersBudget;
+    if (rawBlockersBytes < blockersBudget) {
+      counterBudget += blockersBudget - rawBlockersBytes;
+      blockersBudget = rawBlockersBytes;
+    } else if (rawCounterBytes < counterBudget) {
+      blockersBudget += counterBudget - rawCounterBytes;
+      counterBudget = rawCounterBytes;
+    }
+  }
+
+  const packedBlockers = packClaimList(
+    rawBlockers,
+    blockersBudget,
+    maxItemsPerList,
+    maxClaimBytes,
+    maxEvidenceBytes
+  );
+  const leftoverFromBlockers = Math.max(0, blockersBudget - packedBlockers.usedBytes);
+  const packedCounter = packClaimList(
+    rawCounter,
+    counterBudget + leftoverFromBlockers,
+    maxItemsPerList,
+    maxClaimBytes,
+    maxEvidenceBytes
+  );
+  const truncated = packedBlockers.truncated || packedCounter.truncated;
+
+  return {
+    source: 'executor_model_self_report',
+    verified: false,
+    blockers: packedBlockers.packed,
+    counter_evidence: packedCounter.packed,
+    claims_truncated: truncated,
+    ...(truncated
+      ? {
+          blockers_total: rawBlockers.length,
+          counter_evidence_total: rawCounter.length,
+          ...(latestMeta.recall_ids.report
+            ? { report_recall_id: latestMeta.recall_ids.report }
+            : {}),
+        }
+      : {}),
+    native_events: latestMeta.native_events.slice(0, 5).map((e) => ({
+      source: e.source,
+      message: truncateUtf8ByBytes(e.message, 240).text,
+    })),
   };
 }
 
@@ -120,20 +263,87 @@ export class EvidenceFirewall {
     if (utf8ByteLength(direct) <= maxBytes) {
       return board as unknown as Record<string, unknown>;
     }
-    const trimmedTasks = board.tasks.slice(0, 8).map((t) => ({
-      ...t,
-      runs: t.runs.slice(-4).map((r) => ({
-        ...r,
-        delta_files: r.delta_files.slice(0, 6),
-        unverified_blockers: r.unverified_blockers.slice(0, 6),
-        unverified_counter_evidence: r.unverified_counter_evidence.slice(0, 6),
-      })),
-    }));
-    return {
-      ...board,
-      tasks: trimmedTasks,
-      board_clamped: true,
+    const focusedId = board.task_detail?.task_id ?? board.focus_task_id;
+    const tasks = board.tasks.slice(0, 8);
+    const focused = board.tasks.find(t => t.task_id === focusedId);
+    if (focused && !tasks.includes(focused)) tasks[tasks.length - 1] = focused;
+    const detail = board.task_detail && { ...board.task_detail, runs_prompts: [...board.task_detail.runs_prompts] };
+    if (detail?.selected_run_live) detail.selected_run_live = {
+      ...detail.selected_run_live, entries: [...detail.selected_run_live.entries],
     };
+    const trimmed = { ...board, ...(detail && { task_detail: detail }), board_clamped: true };
+    const size = () => utf8ByteLength(JSON.stringify(trimmed));
+    let excess = size() - maxBytes;
+    if (excess > 0 && detail) {
+      const prompt = truncateUtf8ByBytes(detail.rendered_prompt, utf8ByteLength(detail.rendered_prompt) - excess);
+      detail.rendered_prompt = prompt.text;
+      detail.rendered_prompt_truncated ||= prompt.truncated;
+      excess = size() - maxBytes;
+      const live = detail.selected_run_live;
+      if (live && excess > 0) {
+        let count = 0;
+        while (count < live.entries.length - 1 && excess > 0) {
+          excess -= utf8ByteLength(JSON.stringify(live.entries[count++])) + 1;
+        }
+        live.entries.splice(0, count);
+        live.omitted_count += count;
+        live.truncated ||= count > 0;
+      }
+    }
+    if (size() <= maxBytes) return trimmed;
+    trimmed.tasks = tasks.map((t) => ({
+      ...t,
+      runs: t.runs.filter((r, i) => i >= t.runs.length - 4 ||
+        (t.task_id === focusedId && r.run_id === detail?.selected_run_id)).map((r) => {
+        const summary = boundActivitySummary(r.activities, r.activities_omitted_count, 512);
+        return {
+          ...r,
+          delta_files: r.delta_files.slice(0, 6),
+          unverified_blockers: r.unverified_blockers.slice(0, 6),
+          unverified_counter_evidence: r.unverified_counter_evidence.slice(0, 6),
+          activities: summary.activities,
+          activities_omitted_count: summary.omitted_count,
+        };
+      }),
+    }));
+    // Retain the inspected task and selected instruction ahead of fleet history.
+    while (size() > maxBytes) {
+      let index = trimmed.tasks.length - 1;
+      if (index >= 0 && trimmed.tasks[index].task_id === focusedId) index--;
+      if (index < 0) break;
+      trimmed.tasks.splice(index, 1);
+    }
+    if (detail && size() > maxBytes) {
+      for (const [i, p] of detail.runs_prompts.entries()) {
+        if (p.run_id !== detail.selected_run_id && p.instruction_full) {
+          detail.runs_prompts[i] = { ...p, instruction_full: '', instruction_truncated: true };
+        }
+      }
+      if (size() > maxBytes) {
+        const selected = detail.runs_prompts.filter(p => p.run_id === detail.selected_run_id);
+        detail.runs_prompts_omitted = detail.runs_prompts.length - selected.length;
+        detail.runs_prompts = selected;
+      }
+      if (size() > maxBytes && detail.contract_summary) {
+        detail.contract_summary = { workspace_mode: detail.contract_summary.workspace_mode };
+        detail.contract_truncated = true;
+      }
+    }
+    // JSON escaping can expand even individually byte-bounded control characters.
+    if (detail && size() > maxBytes) {
+      detail.objective_full = truncateUtf8ByBytes(detail.objective_full, 8192).text;
+      detail.objective_truncated = true;
+    }
+    if (size() > maxBytes && trimmed.tasks.length) {
+      const task = trimmed.tasks[0];
+      task.runs = task.runs.filter(r => r.run_id === detail?.selected_run_id);
+      if (size() > maxBytes) task.runs = [];
+      if (size() > maxBytes) trimmed.tasks = [];
+    }
+    if (size() <= maxBytes) return trimmed;
+    return { board_clamped: true, generated_at: board.generated_at, focus_task_id: null,
+      default_codex_model: { resolved_model: null, model_source: 'codex_cli_default', reasoning_effort: null },
+      summary: board.summary, tasks: [] };
   }
 
   /**
@@ -377,22 +587,18 @@ export class EvidenceFirewall {
       output_excerpt: truncateUtf8ByBytes(v.output_excerpt, 600).text,
     }));
 
-    const unverifiedClaims = {
-      source: 'executor_model_self_report',
-      verified: false,
-      blockers: latestMeta.unverified_blockers.slice(0, 10).map((b) => ({
-        claim: truncateUtf8ByBytes(b.claim, 240).text,
-        evidence: b.evidence ? truncateUtf8ByBytes(b.evidence, 160).text : null,
-      })),
-      counter_evidence: latestMeta.unverified_counter_evidence.slice(0, 10).map((c) => ({
-        claim: truncateUtf8ByBytes(c.claim, 240).text,
-        evidence: c.evidence ? truncateUtf8ByBytes(c.evidence, 160).text : null,
-      })),
-      native_events: latestMeta.native_events.slice(0, 5).map((e) => ({
-        source: e.source,
-        message: truncateUtf8ByBytes(e.message, 240).text,
-      })),
-    };
+    const diffPreviewUsedBytes = utf8ByteLength(boundedDiff.text);
+    const isZeroDiff = diffPreviewUsedBytes === 0;
+    const claimsBudgetBytes = isZeroDiff
+      ? Math.min(Math.max(budgets.previewBytes, 14 * 1024), Math.floor(budgets.hardMaxBytes * 0.55))
+      : Math.max(3072, Math.min(8192, budgets.previewBytes - diffPreviewUsedBytes + 3072));
+    const unverifiedClaims = buildBoundedClaims({
+      latestMeta,
+      claimsBudgetBytes,
+      maxItemsPerList: isZeroDiff ? 40 : 20,
+      maxClaimBytes: isZeroDiff ? 2048 : 1024,
+      maxEvidenceBytes: isZeroDiff ? 512 : 384,
+    });
 
     const combinedRecallIds = {
       ...latestMeta.recall_ids,
@@ -443,6 +649,13 @@ export class EvidenceFirewall {
         Math.max(512, Math.floor(cap * 0.25)),
         60
       );
+      const tighterClaims = buildBoundedClaims({
+        latestMeta,
+        claimsBudgetBytes: Math.max(1024, Math.floor(cap * 0.2)),
+        maxItemsPerList: 10,
+        maxClaimBytes: 240,
+        maxEvidenceBytes: 160,
+      });
       return {
         ...fullPayload,
         budget_clamped: true,
@@ -461,6 +674,7 @@ export class EvidenceFirewall {
           omitted_files_total: omittedFiles.length,
           recall_ids: combinedRecallIds,
         },
+        unverified_claims: tighterClaims,
       };
     });
   }

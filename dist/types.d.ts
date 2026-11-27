@@ -99,6 +99,7 @@ export interface RecallArtifactKindMap {
     ledger_diff: string;
     logs: string;
     raw_trace: string;
+    report?: string;
     exec_diff?: string;
     verify_side_effect_diff?: string;
     range_diff?: string;
@@ -107,7 +108,7 @@ export interface RecallIndexEntry {
     recall_id: string;
     task_id: string;
     revision: number;
-    kind: 'diff' | 'ledger_diff' | 'file_diff' | 'logs' | 'raw_trace' | 'diagnostic' | 'exec_diff' | 'verify_side_effect_diff' | 'range_diff';
+    kind: 'diff' | 'ledger_diff' | 'file_diff' | 'logs' | 'raw_trace' | 'report' | 'diagnostic' | 'exec_diff' | 'verify_side_effect_diff' | 'range_diff';
     file_path_rel: string;
     target_path?: string;
     byte_length: number;
@@ -122,6 +123,14 @@ export interface TokenUsageSummary {
 export interface NativeHarnessEventClaim {
     source: 'native_harness_event';
     message: string;
+}
+export type RunActivityKind = 'phase' | 'command' | 'tool' | 'file_change' | 'turn' | 'notice';
+export type RunActivityStatus = 'started' | 'completed' | 'failed' | 'declined' | 'canceled' | 'info';
+export interface RunActivityItem {
+    at: string;
+    kind: RunActivityKind;
+    label: string;
+    status: RunActivityStatus;
 }
 export interface RevisionMetadata {
     task_id: string;
@@ -157,6 +166,8 @@ export interface RevisionMetadata {
     native_events: NativeHarnessEventClaim[];
     snapshot_notes: string[];
     recall_ids: RecallArtifactKindMap;
+    activities?: RunActivityItem[];
+    activities_omitted_count?: number;
     usage?: TokenUsageSummary | null;
 }
 export interface ProcessIdentityRecord {
@@ -201,6 +212,7 @@ export interface RunRecord {
     last_event_at?: string | null;
 }
 export interface TaskRecord {
+    title?: string;
     task_id: string;
     objective: string;
     requested_workspace: string;

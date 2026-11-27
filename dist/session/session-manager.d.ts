@@ -1,4 +1,6 @@
-import type { CallerMetadata, ChangedFileEntry, ClaimItem, CoordinatorActionKind, DiffTotals, ExecutionStatus, ExitReasonInfo, ModelSource, NativeHarnessEventClaim, ReasoningEffort, ReportedStatus, RunRecord, TaskContract, TaskRecord, TokenUsageSummary, VerificationStatus, VerifyCommandResult } from '../types.js';
+import { type LiveStream } from './live-stream.js';
+import { type BoardFileLink } from './board-links.js';
+import type { CallerMetadata, ChangedFileEntry, ClaimItem, CoordinatorActionKind, DiffTotals, ExecutionStatus, ExitReasonInfo, ModelSource, NativeHarnessEventClaim, ReasoningEffort, ReportedStatus, RunActivityItem, RunRecord, TaskContract, TaskRecord, TokenUsageSummary, VerificationStatus, VerifyCommandResult } from '../types.js';
 import { ArchiveStore } from '../observability/index.js';
 export interface BoardCoordinatorRow {
     agent: string;
@@ -47,18 +49,44 @@ export interface BoardRevisionDetail {
     instruction_excerpt: string;
     delta_totals: DiffTotals | null;
     ledger_totals: DiffTotals | null;
-    delta_files: Array<Pick<ChangedFileEntry, 'path' | 'status' | 'insertions' | 'deletions'>>;
+    delta_files: Array<Pick<ChangedFileEntry, 'path' | 'status' | 'insertions' | 'deletions'> & {
+        file_link: BoardFileLink | null;
+    }>;
     unexpected_files: string[];
     external_drift_files: string[];
     verify_side_effect_files: string[];
     verify_results: VerifyCommandResult[];
-    unverified_blockers: ClaimItem[];
-    unverified_counter_evidence: ClaimItem[];
+    unverified_blockers: Array<ClaimItem & {
+        evidence_link: BoardFileLink | null;
+    }>;
+    unverified_counter_evidence: Array<ClaimItem & {
+        evidence_link: BoardFileLink | null;
+    }>;
+    activities: RunActivityItem[];
+    activities_omitted_count: number;
     native_events: NativeHarnessEventClaim[];
     usage: TokenUsageSummary | null;
     error_summary: string | null;
 }
+export interface BoardTaskDetail {
+    task_id: string;
+    title: string;
+    objective_full: string;
+    objective_truncated: boolean;
+    contract_summary: TaskContract;
+    contract_truncated?: boolean;
+    selected_run_id: string | null;
+    runs_prompts: Array<Pick<RunRecord, 'run_id' | 'sequence' | 'mode'> & {
+        instruction_full: string;
+        instruction_truncated: boolean;
+    }>;
+    runs_prompts_omitted?: number;
+    rendered_prompt: string;
+    rendered_prompt_truncated: boolean;
+    selected_run_live: LiveStream | null;
+}
 export interface BoardTaskItem {
+    title: string;
     task_id: string;
     objective: string;
     workspace: string;
@@ -74,6 +102,7 @@ export interface BoardTaskItem {
     runs: BoardRevisionDetail[];
 }
 export interface PassboxBoardSnapshot {
+    task_detail?: BoardTaskDetail;
     generated_at: string;
     focus_task_id: string | null;
     default_codex_model: {
@@ -89,8 +118,11 @@ export interface PassboxBoardSnapshot {
     };
     tasks: BoardTaskItem[];
 }
+export declare const DEFAULT_COLLECT_WAIT_SECONDS = 600;
+export declare function resolveMaxCollectWaitSeconds(): number;
 export declare class SessionManager {
     readonly archive: ArchiveStore;
+    private readonly lastBornCheckMs;
     constructor(archive: ArchiveStore);
     /**
      * Reconciles a task whose detached worker died unexpectedly without publishing its revision,
@@ -102,6 +134,7 @@ export declare class SessionManager {
     }>;
     private ensureWorkspaceAvailableForWrite;
     delegate(params: {
+        title?: string;
         objective: string;
         workspace: string;
         contract?: TaskContract;
@@ -129,6 +162,12 @@ export declare class SessionManager {
         sinceRevision?: number;
         waitSeconds?: number;
         signal?: AbortSignal;
+        onProgress?: (info: {
+            phase: string;
+            elapsedSeconds: number;
+            totalSeconds: number;
+            lastEvent: string | null;
+        }) => void;
     }): Promise<{
         task: TaskRecord;
         activeRun: RunRecord | null;
@@ -150,6 +189,8 @@ export declare class SessionManager {
      */
     getBoardSnapshot(options?: {
         focusTaskId?: string;
+        includeDetail?: boolean;
+        runId?: string;
         limit?: number;
     }): Promise<PassboxBoardSnapshot>;
 }

@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { captureWorkspaceSnapshot, computeTreeDiff, computeUnexpectedFiles, runVerificationCommands, } from '../evidence/index.js';
 import { buildInitialDelegationPrompt, buildResumeSteerPrompt, captureProcessIdentity, classifyExitReason, resolveEffectiveCodexModel, } from '../adapters/index.js';
 import { readJsonWithRetry, withDirectoryLock, writeAtomicJson, } from '../observability/index.js';
+import { boundActivitySummary } from '../firewall/budgets.js';
 const SELF_DIR = path.dirname(fileURLToPath(import.meta.url));
 export const WORKER_ENTRYPOINT_PATH = path.join(SELF_DIR, 'run-worker.js');
 export function normalizeWorkspaceComparisonKey(workspacePath) {
@@ -197,7 +198,9 @@ export async function finalizeRunAndPublishRevision(params) {
         !isCancelRequested() &&
         hasVerifyCommands;
     let verifyOutcome = { status: 'not_run', results: [], combinedLog: '', aborted: false, truncated: false };
+    const recordActivity = (kind, label, status) => archive.appendRunActivity(taskId, runId, { at: new Date().toISOString(), kind, label, status });
     if (shouldVerify) {
+        recordActivity('phase', 'verifying', 'started');
         mutateTaskRecord(archive, taskId, (t) => {
             const r = t.runs.find((x) => x.run_id === runId);
             if (r && r.status === 'running') {
@@ -210,6 +213,12 @@ export async function finalizeRunAndPublishRevision(params) {
         verifyOutcome = await runVerificationCommands(workspace, taskSnapshot.contract.verify_commands, {
             signal: params.signal,
             logFilePath: runPaths.verifyLogFile,
+            onCommandEvent(argv, index, status) {
+                const [executable, ...args] = argv;
+                const displayArgv = [path.isAbsolute(executable) ? path.basename(executable) : executable, ...args];
+                const label = displayArgv.map((arg) => /\s/.test(arg) ? JSON.stringify(arg) : arg).join(' ');
+                recordActivity('command', 'verify[' + index + ']: ' + label, status);
+            },
             onChildSpawned(pid) {
                 mutateTaskRecord(archive, taskId, (t) => {
                     const r = t.runs.find((x) => x.run_id === runId);
@@ -278,6 +287,10 @@ export async function finalizeRunAndPublishRevision(params) {
         const effectiveEffort = params.reasoningEffort !== undefined ? params.reasoningEffort : (run.reasoning_effort ?? null);
         const nextRev = task.current_revision + 1;
         publishedRevision = nextRev;
+        const terminalStatus = effectiveExecutionStatus === 'succeeded' ? 'completed'
+            : effectiveExecutionStatus === 'canceled' ? 'canceled' : 'failed';
+        recordActivity('phase', 'completed', terminalStatus);
+        const summary = boundActivitySummary(archive.readRunActivities(taskId, runId));
         archive.publishImmutableRevision({
             taskId,
             runId,
@@ -331,6 +344,8 @@ export async function finalizeRunAndPublishRevision(params) {
                 native_events: effectiveNativeEvents,
                 snapshot_notes: finalSnap.scope_notes,
                 usage: params.usage,
+                activities: summary.activities,
+                activities_omitted_count: summary.omitted_count,
             },
         });
         run.status = effectiveExecutionStatus;

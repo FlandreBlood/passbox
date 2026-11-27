@@ -3,6 +3,7 @@ export interface VerificationRunOptions {
     signal?: AbortSignal;
     onChildSpawned?: (pid: number | null) => void;
     logFilePath?: string;
+    onCommandEvent?: (argv: string[], index: number, status: 'started' | 'completed' | 'failed') => void;
 }
 export declare function prepareSafeArgvSpawn(argv: string[], platform?: NodeJS.Platform): {
     cmd: string;

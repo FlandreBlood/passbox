@@ -1,4 +1,5 @@
-import type { BudgetOptions } from '../types.js';
+import type { BudgetOptions, RunActivityItem, RunActivityKind, RunActivityStatus } from '../types.js';
+import { redactSensitiveText } from '../observability/redact.js';
 
 export interface ResolvedBudgets {
   statusBytes: number;
@@ -89,6 +90,46 @@ export function truncateUtf8ByBytes(
     text: lo > 0 ? codepoints.slice(0, lo).join('') : '',
     truncated: true,
   };
+}
+
+const ACTIVITY_KINDS = new Set<RunActivityKind>(['phase', 'command', 'tool', 'file_change', 'turn', 'notice']);
+const ACTIVITY_STATUSES = new Set<RunActivityStatus>(['started', 'completed', 'failed', 'declined', 'canceled', 'info']);
+
+export function sanitizeActivityItem(input: unknown): RunActivityItem | null {
+  if (!input || typeof input !== 'object') return null;
+  const { at, kind, label, status } = input as Partial<RunActivityItem>;
+  if (typeof at !== 'string' || typeof label !== 'string' ||
+      !ACTIVITY_KINDS.has(kind as RunActivityKind) ||
+      !ACTIVITY_STATUSES.has(status as RunActivityStatus)) return null;
+  const timestamp = Date.parse(at);
+  if (!Number.isFinite(timestamp)) return null;
+  return {
+    at: new Date(timestamp).toISOString(),
+    kind: kind as RunActivityKind,
+    label: truncateUtf8ByBytes(redactSensitiveText(label).replace(/\s+/g, ' ').trim(), 120).text,
+    status: status as RunActivityStatus,
+  };
+}
+
+export function boundActivitySummary(
+  items: readonly unknown[] = [],
+  previouslyOmitted = 0,
+  maxBytes = DEFAULT_BUDGETS.summaryBytes
+): { activities: RunActivityItem[]; omitted_count: number } {
+  const ordered = items.map(sanitizeActivityItem).filter((item) => item !== null)
+    .sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
+  const budget = Math.min(maxBytes, DEFAULT_BUDGETS.summaryBytes);
+  const emptyBytes = utf8ByteLength(JSON.stringify({ activities: [], omitted_count: 0 })) - 1;
+  let start = ordered.length;
+  let itemsBytes = 0;
+  while (start > 0) {
+    const nextBytes = itemsBytes + utf8ByteLength(JSON.stringify(ordered[start - 1])) +
+      (start < ordered.length ? 1 : 0);
+    if (emptyBytes + nextBytes + String(previouslyOmitted + start - 1).length > budget) break;
+    itemsBytes = nextBytes;
+    start--;
+  }
+  return { activities: ordered.slice(start), omitted_count: previouslyOmitted + start };
 }
 
 export function truncateByBytesAndLines(

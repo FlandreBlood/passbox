@@ -1,10 +1,11 @@
-import type { CoordinatorActivityRecord, RecallIndexEntry, RevisionMetadata } from '../types.js';
+import type { CoordinatorActivityRecord, RecallIndexEntry, RevisionMetadata, RunActivityItem } from '../types.js';
 export declare function resolvePluginDataDir(explicitDataDir?: string): string;
 export declare function shortHash(input: string, len?: number): string;
 export interface RunArtifactPaths {
     runDir: string;
     specFile: string;
     rawTraceFile: string;
+    activitiesFile: string;
     stderrFile: string;
     verifyLogFile: string;
     lastMessageFile: string;
@@ -66,6 +67,8 @@ export declare class ArchiveStore {
     revisionDir(taskId: string, revision: number): string;
     revisionMetaFile(taskId: string, revision: number): string;
     runPaths(taskId: string, runId: string): RunArtifactPaths;
+    appendRunActivity(taskId: string, runId: string, item: RunActivityItem): void;
+    readRunActivities(taskId: string, runId: string): RunActivityItem[];
     private registerRecallEntry;
     makeDeltaFileRecallId(taskId: string, revision: number, filePath: string): string;
     makeLedgerFileRecallId(taskId: string, revision: number, filePath: string): string;

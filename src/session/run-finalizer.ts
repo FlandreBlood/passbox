@@ -11,6 +11,7 @@ import type {
   ReasoningEffort,
   ReportedStatus,
   RevisionMetadata,
+  RunActivityItem,
   RunRecord,
   TaskContract,
   TaskRecord,
@@ -35,6 +36,7 @@ import {
   withDirectoryLock,
   writeAtomicJson,
 } from '../observability/index.js';
+import { boundActivitySummary } from '../firewall/budgets.js';
 
 export interface WorkerRunSpec {
   data_dir: string;
@@ -303,7 +305,11 @@ export async function finalizeRunAndPublishRevision(
     truncated: boolean;
   } = { status: 'not_run', results: [], combinedLog: '', aborted: false, truncated: false };
 
+  const recordActivity = (kind: RunActivityItem['kind'], label: string, status: RunActivityItem['status']) =>
+    archive.appendRunActivity(taskId, runId, { at: new Date().toISOString(), kind, label, status });
+
   if (shouldVerify) {
+    recordActivity('phase', 'verifying', 'started');
     mutateTaskRecord(archive, taskId, (t) => {
       const r = t.runs.find((x) => x.run_id === runId);
       if (r && r.status === 'running') {
@@ -320,6 +326,12 @@ export async function finalizeRunAndPublishRevision(
       {
         signal: params.signal,
         logFilePath: runPaths.verifyLogFile,
+        onCommandEvent(argv, index, status) {
+          const [executable, ...args] = argv;
+          const displayArgv = [path.isAbsolute(executable) ? path.basename(executable) : executable, ...args];
+          const label = displayArgv.map((arg) => /\s/.test(arg) ? JSON.stringify(arg) : arg).join(' ');
+          recordActivity('command', 'verify[' + index + ']: ' + label, status);
+        },
         onChildSpawned(pid) {
           mutateTaskRecord(archive, taskId, (t) => {
             const r = t.runs.find((x) => x.run_id === runId);
@@ -417,6 +429,11 @@ export async function finalizeRunAndPublishRevision(
     const nextRev = task.current_revision + 1;
     publishedRevision = nextRev;
 
+    const terminalStatus = effectiveExecutionStatus === 'succeeded' ? 'completed'
+      : effectiveExecutionStatus === 'canceled' ? 'canceled' : 'failed';
+    recordActivity('phase', 'completed', terminalStatus);
+    const summary = boundActivitySummary(archive.readRunActivities(taskId, runId));
+
     archive.publishImmutableRevision({
       taskId,
       runId,
@@ -470,6 +487,8 @@ export async function finalizeRunAndPublishRevision(
         native_events: effectiveNativeEvents,
         snapshot_notes: finalSnap.scope_notes,
         usage: params.usage,
+        activities: summary.activities,
+        activities_omitted_count: summary.omitted_count,
       },
     });
 

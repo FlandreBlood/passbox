@@ -1,6 +1,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { deriveTaskTitle } from './task-title.js';
+import { readLiveStream, type LiveStream } from './live-stream.js';
+import { redactArgv } from '../observability/redact.js';
+import { boundActivitySummary, truncateUtf8ByBytes } from '../firewall/budgets.js';
+import { resolveEvidenceFileLink, resolveWorkspaceFileLink, type BoardFileLink } from './board-links.js';
 import type {
   CallerMetadata,
   ChangedFileEntry,
@@ -14,6 +19,7 @@ import type {
   ReasoningEffort,
   ReportedStatus,
   RevisionMetadata,
+  RunActivityItem,
   RunRecord,
   TaskContract,
   TaskRecord,
@@ -112,19 +118,42 @@ export interface BoardRevisionDetail {
   instruction_excerpt: string;
   delta_totals: DiffTotals | null;
   ledger_totals: DiffTotals | null;
-  delta_files: Array<Pick<ChangedFileEntry, 'path' | 'status' | 'insertions' | 'deletions'>>;
+  delta_files: Array<Pick<ChangedFileEntry, 'path' | 'status' | 'insertions' | 'deletions'> & {
+    file_link: BoardFileLink | null;
+  }>;
   unexpected_files: string[];
   external_drift_files: string[];
   verify_side_effect_files: string[];
   verify_results: VerifyCommandResult[];
-  unverified_blockers: ClaimItem[];
-  unverified_counter_evidence: ClaimItem[];
+  unverified_blockers: Array<ClaimItem & { evidence_link: BoardFileLink | null }>;
+  unverified_counter_evidence: Array<ClaimItem & { evidence_link: BoardFileLink | null }>;
+  activities: RunActivityItem[];
+  activities_omitted_count: number;
   native_events: NativeHarnessEventClaim[];
   usage: TokenUsageSummary | null;
   error_summary: string | null;
 }
 
+export interface BoardTaskDetail {
+  task_id: string;
+  title: string;
+  objective_full: string;
+  objective_truncated: boolean;
+  contract_summary: TaskContract;
+  contract_truncated?: boolean;
+  selected_run_id: string | null;
+  runs_prompts: Array<Pick<RunRecord, 'run_id' | 'sequence' | 'mode'> & {
+    instruction_full: string;
+    instruction_truncated: boolean;
+  }>;
+  runs_prompts_omitted?: number;
+  rendered_prompt: string;
+  rendered_prompt_truncated: boolean;
+  selected_run_live: LiveStream | null;
+}
+
 export interface BoardTaskItem {
+  title: string;
   task_id: string;
   objective: string;
   workspace: string;
@@ -141,6 +170,7 @@ export interface BoardTaskItem {
 }
 
 export interface PassboxBoardSnapshot {
+  task_detail?: BoardTaskDetail;
   generated_at: string;
   focus_task_id: string | null;
   default_codex_model: {
@@ -277,8 +307,22 @@ function extractTailTraceEventSummary(rawTraceFile: string): string | null {
   return null;
 }
 
+export const DEFAULT_COLLECT_WAIT_SECONDS = 600;
+
+export function resolveMaxCollectWaitSeconds(): number {
+  const raw = process.env.PASSBOX_MAX_COLLECT_WAIT_SECONDS;
+  if (raw !== undefined && raw.trim() !== '') {
+    const parsed = Number(raw);
+    if (Number.isFinite(parsed)) {
+      return Math.max(60, Math.min(Math.floor(parsed), 1800));
+    }
+  }
+  return 1800;
+}
+
 export class SessionManager {
   readonly archive: ArchiveStore;
+  private readonly lastBornCheckMs = new Map<string, number>();
 
   constructor(archive: ArchiveStore) {
     this.archive = archive;
@@ -297,11 +341,13 @@ export class SessionManager {
     }
     let task = readTaskRecordLocked(this.archive, taskId);
     if (task.state !== 'running' || !task.active_run_id) {
+      this.lastBornCheckMs.delete(taskId);
       return { task, activeRun: null };
     }
 
     const activeRun = task.runs.find((r) => r.run_id === task.active_run_id) ?? null;
     if (!activeRun) {
+      this.lastBornCheckMs.delete(taskId);
       task = mutateTaskRecord(this.archive, taskId, (t) => {
         t.state = 'idle';
         t.active_run_id = null;
@@ -316,8 +362,13 @@ export class SessionManager {
       return { task, activeRun };
     }
 
-    const idleSinceUpdateMs = Date.now() - Date.parse(task.updated_at);
-    const verifyBorn = idleSinceUpdateMs > 10000;
+    const nowMs = Date.now();
+    const idleSinceUpdateMs = nowMs - Date.parse(task.updated_at);
+    const verifyBorn =
+      idleSinceUpdateMs > 10000 && nowMs - (this.lastBornCheckMs.get(taskId) ?? 0) >= 15000;
+    if (verifyBorn) {
+      this.lastBornCheckMs.set(taskId, nowMs);
+    }
     const alive =
       activeRun.worker_identity !== null
         ? isProcessIdentityAlive(activeRun.worker_identity, verifyBorn)
@@ -417,6 +468,7 @@ export class SessionManager {
   }
 
   async delegate(params: {
+    title?: string;
     objective: string;
     workspace: string;
     contract?: TaskContract;
@@ -522,6 +574,7 @@ export class SessionManager {
 
         const taskRecord: TaskRecord = {
           task_id: taskId,
+          title: deriveTaskTitle(params.objective, params.title),
           objective: params.objective.trim(),
           requested_workspace: params.workspace,
           repo_root: repoRoot,
@@ -587,11 +640,20 @@ export class SessionManager {
     sinceRevision?: number;
     waitSeconds?: number;
     signal?: AbortSignal;
+    onProgress?: (info: {
+      phase: string;
+      elapsedSeconds: number;
+      totalSeconds: number;
+      lastEvent: string | null;
+    }) => void;
   }): Promise<{ task: TaskRecord; activeRun: RunRecord | null; waitedMs: number }> {
     const started = Date.now();
     let { task, activeRun } = await this.getAndReconcileTask(params.taskId);
 
-    const waitSec = Math.max(0, Math.min(params.waitSeconds ?? 60, 300));
+    const waitSec = Math.max(
+      0,
+      Math.min(params.waitSeconds ?? DEFAULT_COLLECT_WAIT_SECONDS, resolveMaxCollectWaitSeconds())
+    );
     const hasUnseenRevision =
       task.current_revision > 0 &&
       (params.sinceRevision === undefined || params.sinceRevision < task.current_revision);
@@ -627,8 +689,23 @@ export class SessionManager {
       let settled = false;
       let watcher: fs.FSWatcher | null = null;
       let pollTimer: NodeJS.Timeout | null = null;
+      let progressTimer: NodeJS.Timeout | null = null;
       let deadlineTimer: NodeJS.Timeout | null = null;
       let checking = false;
+      let lastReportedPhase = activeRun?.phase ?? 'running';
+      let lastProgressAt = started;
+
+      const emitProgress = () => {
+        if (!params.onProgress || settled) return;
+        try {
+          params.onProgress({
+            phase: activeRun?.phase ?? 'running',
+            elapsedSeconds: Math.max(0, Math.floor((Date.now() - started) / 1000)),
+            totalSeconds: Math.ceil(waitSec),
+            lastEvent: activeRun?.last_event ?? null,
+          });
+        } catch {}
+      };
 
       const finish = () => {
         if (settled) return;
@@ -639,6 +716,7 @@ export class SessionManager {
           } catch {}
         }
         if (pollTimer) clearInterval(pollTimer);
+        if (progressTimer) clearInterval(progressTimer);
         if (deadlineTimer) clearTimeout(deadlineTimer);
         params.signal?.removeEventListener('abort', finish);
         resolve();
@@ -655,6 +733,14 @@ export class SessionManager {
             finish();
           } else if (Date.now() >= deadline) {
             finish();
+          } else if (params.onProgress) {
+            const now = Date.now();
+            const currentPhase = activeRun?.phase ?? 'running';
+            if (currentPhase !== lastReportedPhase && now - lastProgressAt >= 1000) {
+              lastReportedPhase = currentPhase;
+              lastProgressAt = now;
+              emitProgress();
+            }
           }
         } catch {
           finish();
@@ -672,7 +758,18 @@ export class SessionManager {
 
       pollTimer = setInterval(() => {
         void checkProgress();
-      }, 200);
+      }, 500);
+
+      if (params.onProgress) {
+        progressTimer = setInterval(() => {
+          const now = Date.now();
+          if (now - lastProgressAt >= 5000) {
+            lastProgressAt = now;
+            lastReportedPhase = activeRun?.phase ?? lastReportedPhase;
+            emitProgress();
+          }
+        }, 15000);
+      }
 
       deadlineTimer = setTimeout(finish, Math.max(10, deadline - Date.now()));
       params.signal?.addEventListener('abort', finish, { once: true });
@@ -1090,6 +1187,8 @@ export class SessionManager {
    */
   async getBoardSnapshot(options?: {
     focusTaskId?: string;
+    includeDetail?: boolean;
+    runId?: string;
     limit?: number;
   }): Promise<PassboxBoardSnapshot> {
     const maxTasks = Math.max(1, Math.min(options?.limit ?? 20, 50));
@@ -1144,6 +1243,8 @@ export class SessionManager {
 
     const defaultCodex = resolveEffectiveCodexModel({});
 
+    let detail: BoardTaskDetail | undefined;
+    const detailTaskId = options?.includeDetail ? options.focusTaskId ?? selected[0]?.task.task_id : null;
     const boardTasks: BoardTaskItem[] = selected.map(({ task, activeRun }) => {
       const coordFile = this.archive.readCoordinatorActivity(task.task_id);
       const caller = coordFile?.caller ?? task.caller ?? null;
@@ -1278,9 +1379,58 @@ export class SessionManager {
         exit_reason: execExitReason,
       };
 
-      const runDetails: BoardRevisionDetail[] = task.runs.slice(-12).map((run) => {
+      const boardClaim = (item: ClaimItem) => {
+        const evidence = item.evidence ? redactSensitiveText(item.evidence) : null;
+        return {
+          claim: redactSensitiveText(item.claim).slice(0, 600),
+          evidence: evidence?.slice(0, 260) ?? null,
+          evidence_link: resolveEvidenceFileLink(task.execution_workspace, evidence),
+        };
+      };
+
+      const title = deriveTaskTitle(task.objective, task.title);
+      const visibleRuns = task.runs.slice(-12);
+      if (task.task_id === detailTaskId) {
+        const run = options?.runId ? task.runs.find(r => r.run_id === options.runId) : latestRun;
+        if (!run && options?.runId) throw new Error('Unknown run for this task.');
+        if (run && !visibleRuns.includes(run)) visibleRuns.unshift(run);
+        const paths = run && this.archive.runPaths(task.task_id, run.run_id);
+        const prompt = paths && fs.existsSync(paths.specFile)
+          ? readJsonWithRetry<WorkerRunSpec>(paths.specFile).prompt : '';
+        const rendered = truncateUtf8ByBytes(redactSensitiveText(prompt), 24 * 1024);
+        const objective = truncateUtf8ByBytes(redactSensitiveText(task.objective), 32 * 1024);
+        const contract = task.contract;
+        detail = {
+          task_id: task.task_id, title,
+          objective_full: objective.text, objective_truncated: objective.truncated,
+          contract_summary: {
+            workspace_mode: task.workspace_mode,
+            expected_files: contract.expected_files?.map(redactSensitiveText),
+            acceptance: contract.acceptance?.map(redactSensitiveText),
+            invariants: contract.invariants?.map(i => ({
+              claim: redactSensitiveText(i.claim), evidence: i.evidence && redactSensitiveText(i.evidence),
+            })),
+            verify_commands: contract.verify_commands?.map(c => ({
+              argv: redactArgv(c.argv), timeout_seconds: c.timeout_seconds,
+              cwd_rel: c.cwd_rel && redactSensitiveText(c.cwd_rel),
+            })),
+          },
+          selected_run_id: run?.run_id ?? null,
+          rendered_prompt: rendered.text, rendered_prompt_truncated: rendered.truncated,
+          runs_prompts: task.runs.map(({ run_id, sequence, mode, instruction }) => {
+            const bounded = truncateUtf8ByBytes(redactSensitiveText(instruction), 16 * 1024);
+            return { run_id, sequence, mode, instruction_full: bounded.text, instruction_truncated: bounded.truncated };
+          }),
+          selected_run_live: run ? readLiveStream(this.archive, task.task_id, task.execution_workspace,
+            run, revMetaByRev.get(run.published_revision ?? 0)) : null,
+        };
+      }
+      const runDetails: BoardRevisionDetail[] = visibleRuns.map((run) => {
         const meta =
           run.published_revision != null ? revMetaByRev.get(run.published_revision) : undefined;
+        const activitySummary = run.status === 'running'
+          ? boundActivitySummary(this.archive.readRunActivities(task.task_id, run.run_id))
+          : boundActivitySummary(meta?.activities, meta?.activities_omitted_count);
         const rModel = resolveRunModel(run, meta);
         const rExit =
           run.exit_reason ??
@@ -1310,28 +1460,25 @@ export class SessionManager {
           delta_totals: meta?.delta_totals ?? null,
           ledger_totals: meta?.ledger_totals ?? null,
           delta_files: (meta?.delta_files ?? []).slice(0, 15).map((f) => ({
-            path: f.path,
+            path: redactSensitiveText(f.path),
             status: f.status,
             insertions: f.insertions,
             deletions: f.deletions,
+            file_link: f.status === 'D' ? null : resolveWorkspaceFileLink(task.execution_workspace, f.path),
           })),
-          unexpected_files: (meta?.unexpected_files ?? []).slice(0, 10),
-          external_drift_files: (meta?.external_drift_files ?? []).slice(0, 10),
-          verify_side_effect_files: (meta?.verify_side_effect_files ?? []).slice(0, 10),
+          unexpected_files: (meta?.unexpected_files ?? []).slice(0, 10).map(redactSensitiveText),
+          external_drift_files: (meta?.external_drift_files ?? []).slice(0, 10).map(redactSensitiveText),
+          verify_side_effect_files: (meta?.verify_side_effect_files ?? []).slice(0, 10).map(redactSensitiveText),
           verify_results: (meta?.verify_results ?? []).slice(0, 5).map((v) => ({
             ...v,
+            argv: redactArgv(v.argv),
+            spawn_error: v.spawn_error && redactSensitiveText(v.spawn_error),
             output_excerpt: redactSensitiveText(v.output_excerpt).slice(0, 320),
           })),
-          unverified_blockers: (meta?.unverified_blockers ?? []).slice(0, 15).map((b) => ({
-            claim: redactSensitiveText(b.claim).slice(0, 300),
-            evidence: b.evidence ? redactSensitiveText(b.evidence).slice(0, 220) : null,
-          })),
-          unverified_counter_evidence: (meta?.unverified_counter_evidence ?? [])
-            .slice(0, 15)
-            .map((c) => ({
-              claim: redactSensitiveText(c.claim).slice(0, 300),
-              evidence: c.evidence ? redactSensitiveText(c.evidence).slice(0, 220) : null,
-            })),
+          unverified_blockers: (meta?.unverified_blockers ?? []).slice(0, 20).map(boardClaim),
+          unverified_counter_evidence: (meta?.unverified_counter_evidence ?? []).slice(0, 20).map(boardClaim),
+          activities: activitySummary.activities,
+          activities_omitted_count: activitySummary.omitted_count,
           native_events: (meta?.native_events ?? []).slice(0, 6).map((e) => ({
             source: e.source,
             message: redactSensitiveText(e.message).slice(0, 280),
@@ -1351,9 +1498,10 @@ export class SessionManager {
 
       return {
         task_id: task.task_id,
+        title,
         objective: redactSensitiveText(task.objective).slice(0, 500),
-        workspace: task.execution_workspace,
-        workspace_name: path.basename(task.repo_root || task.execution_workspace) || task.execution_workspace,
+        workspace: redactSensitiveText(task.execution_workspace),
+        workspace_name: redactSensitiveText(path.basename(task.repo_root || task.execution_workspace) || task.execution_workspace),
         workspace_mode: task.workspace_mode,
         state: task.state,
         current_revision: task.current_revision,
@@ -1381,6 +1529,7 @@ export class SessionManager {
         failed_or_interrupted_tasks: failedOrInterruptedCount,
       },
       tasks: boardTasks,
+      ...(detail && { task_detail: detail }),
     };
   }
 }

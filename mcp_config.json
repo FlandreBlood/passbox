@@ -3,7 +3,7 @@
     "core": {
       "command": "node",
       "args": ["${PLUGIN_ROOT}/dist/interface/mcp-server.js"],
-      "timeoutSeconds": 600
+      "timeoutSeconds": 1860
     }
   }
 }

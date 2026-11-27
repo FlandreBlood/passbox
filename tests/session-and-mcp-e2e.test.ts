@@ -21,6 +21,7 @@ class StdioMcpTestClient {
     number,
     { resolve: (val: any) => void; reject: (err: Error) => void }
   >();
+  readonly notifications: any[] = [];
   private buf = '';
 
   constructor(envOverrides: Record<string, string>) {
@@ -39,6 +40,10 @@ class StdioMcpTestClient {
         this.buf = this.buf.slice(idx + 1);
         if (!line) continue;
         const msg = JSON.parse(line);
+        if (msg.id === undefined) {
+          this.notifications.push(msg);
+          continue;
+        }
         const waiter = this.pending.get(msg.id);
         if (waiter) {
           this.pending.delete(msg.id);
@@ -720,6 +725,99 @@ describe('M1-M6 End-to-End MCP Orchestration & Session Lifecycle', () => {
 
       await new Promise((r) => setTimeout(r, 2700));
       assert.equal(fs.existsSync(markerFile), false, 'Canceled verification child must not finish writing marker');
+    } finally {
+      await client.close();
+      cleanup();
+      fs.rmSync(dataDir, { recursive: true, force: true });
+      fs.rmSync(fakeStateDir, { recursive: true, force: true });
+    }
+  });
+
+  it('accepts extended wait_seconds (900s), emits progress notifications only when progressToken is provided, and returns recall_ids.report', async () => {
+    const { repoDir, cleanup } = createTempGitRepo();
+    const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'passbox-progress-data-'));
+    const fakeStateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'passbox-progress-fake-'));
+
+    writeFakeScenario(fakeStateDir, {
+      steps: [
+        {
+          delay_ms: 1400,
+          events: [
+            { type: 'item.started', item: { id: 'c1', type: 'command_execution', command: 'echo scanning' } },
+            { type: 'item.completed', item: { id: 'c1', type: 'command_execution', command: 'echo scanning', exit_code: 0 } },
+          ],
+          report: {
+            status: 'completed',
+            blockers: [{ claim: 'Review finding one', evidence: 'README.md:1' }],
+            counter_evidence: [],
+          },
+        },
+        {
+          delay_ms: 1400,
+          events: [
+            { type: 'item.started', item: { id: 'c2', type: 'command_execution', command: 'echo second' } },
+          ],
+          report: {
+            status: 'completed',
+            blockers: [],
+            counter_evidence: [],
+          },
+        },
+      ],
+    });
+
+    const client = new StdioMcpTestClient({
+      PLUGIN_DATA: dataDir,
+      PASSBOX_CODEX_BIN: FAKE_CODEX_JS,
+      PASSBOX_FAKE_CODEX_STATE_DIR: fakeStateDir,
+    });
+
+    try {
+      await client.request('initialize').promise;
+      const d1 = await client.callToolParsed('passbox_delegate', {
+        objective: 'Extended wait and progress check',
+        workspace: repoDir,
+      });
+      const taskId = d1.data.task_id as string;
+
+      // 1. Call passbox_collect with wait_seconds=900 and _meta.progressToken
+      const collectWithProgress = await client.request('tools/call', {
+        name: 'passbox_collect',
+        arguments: { task_id: taskId, wait_seconds: 900 },
+        _meta: { progressToken: 'tok-900' },
+      }).promise;
+      const c1 = JSON.parse(collectWithProgress.content[0].text);
+      assert.equal(c1.revision, 1);
+      assert.ok(c1.artifacts.recall_ids.report);
+      const reportSlice = await client.callToolParsed('passbox_recall', {
+        recall_id: c1.artifacts.recall_ids.report,
+      });
+      assert.equal(reportSlice.data.kind, 'report');
+      assert.ok(reportSlice.data.content.includes('Review finding one'));
+
+      const progressNotes = client.notifications.filter(
+        (n) => n.method === 'notifications/progress' && n.params?.progressToken === 'tok-900'
+      );
+      assert.ok(progressNotes.length >= 1, 'Expected at least one notifications/progress on phase transition');
+      assert.equal(progressNotes[0].params.total, 900);
+
+      // 2. Call passbox_collect WITHOUT progressToken -> must emit zero notifications/progress
+      client.notifications.length = 0;
+      await client.callToolParsed('passbox_steer', {
+        task_id: taskId,
+        instruction: 'Second pass without progressToken',
+      });
+      const c2 = await client.callToolParsed('passbox_collect', {
+        task_id: taskId,
+        since_revision: 1,
+        wait_seconds: 900,
+      });
+      assert.equal(c2.data.revision, 2);
+      assert.equal(
+        client.notifications.filter((n) => n.method === 'notifications/progress').length,
+        0,
+        'Must not emit unsolicited notifications/progress when progressToken is absent'
+      );
     } finally {
       await client.close();
       cleanup();

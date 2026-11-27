@@ -191,13 +191,39 @@ async function handleJsonRpcMessage(msg: JsonRpcRequest): Promise<void> {
           params.arguments && typeof params.arguments === 'object' && !Array.isArray(params.arguments)
             ? (params.arguments as Record<string, unknown>)
             : {};
+        const rawMeta =
+          params._meta && typeof params._meta === 'object' && !Array.isArray(params._meta)
+            ? (params._meta as Record<string, unknown>)
+            : undefined;
+        const progressToken =
+          typeof rawMeta?.progressToken === 'string' || typeof rawMeta?.progressToken === 'number'
+            ? rawMeta.progressToken
+            : undefined;
 
         const ctrl = new AbortController();
         if (id !== null) {
           inFlightControllers.set(id, ctrl);
         }
         try {
-          const result = await dispatcher.callTool(toolName, toolArgs, ctrl.signal);
+          const result = await dispatcher.callTool(
+            toolName,
+            toolArgs,
+            ctrl.signal,
+            progressToken !== undefined
+              ? (info) => {
+                  writeRpcMessage({
+                    jsonrpc: '2.0',
+                    method: 'notifications/progress',
+                    params: {
+                      progressToken,
+                      progress: info.progress,
+                      ...(info.total !== undefined ? { total: info.total } : {}),
+                      ...(info.message ? { message: info.message } : {}),
+                    },
+                  });
+                }
+              : undefined
+          );
           writeRpcMessage({ jsonrpc: '2.0', id, result });
         } finally {
           if (id !== null) {

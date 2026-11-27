@@ -4,6 +4,7 @@ import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import { readJsonWithRetry, writeAtomicJson, writeAtomicText } from './fs-atomic.js';
 import { redactSensitiveText } from './redact.js';
+import { sanitizeActivityItem } from '../firewall/budgets.js';
 export function resolvePluginDataDir(explicitDataDir) {
     const raw = explicitDataDir ||
         process.env.PASSBOX_DATA_DIR ||
@@ -136,12 +137,54 @@ export class ArchiveStore {
             runDir,
             specFile: path.join(runDir, 'spec.json'),
             rawTraceFile: path.join(runDir, 'raw_trace.jsonl'),
+            activitiesFile: path.join(runDir, 'activities.jsonl'),
             stderrFile: path.join(runDir, 'stderr.log'),
             verifyLogFile: path.join(runDir, 'verify.log'),
             lastMessageFile: path.join(runDir, 'last_message.json'),
             outputSchemaFile: path.join(runDir, 'output_schema.json'),
             cancelFlagFile: path.join(runDir, 'cancel.flag'),
         };
+    }
+    appendRunActivity(taskId, runId, item) {
+        const clean = sanitizeActivityItem(item);
+        if (!clean)
+            return;
+        const { activitiesFile } = this.runPaths(taskId, runId);
+        const fd = fs.openSync(activitiesFile, 'a+');
+        try {
+            // Delimit a partial tail left by a worker that exited during a write.
+            const { size } = fs.fstatSync(fd);
+            const lastByte = Buffer.alloc(1);
+            const partial = size > 0 && fs.readSync(fd, lastByte, 0, 1, size - 1) === 1 && lastByte[0] !== 10;
+            fs.appendFileSync(fd, (partial ? '\n' : '') + JSON.stringify(clean) + '\n', 'utf8');
+        }
+        finally {
+            fs.closeSync(fd);
+        }
+    }
+    readRunActivities(taskId, runId) {
+        const file = path.join(this.taskDir(taskId), 'runs', runId, 'activities.jsonl');
+        let text;
+        try {
+            text = fs.readFileSync(file, 'utf8');
+        }
+        catch {
+            return [];
+        }
+        const activities = [];
+        for (const line of text.split('\n')) {
+            if (!line.trim())
+                continue;
+            try {
+                const item = sanitizeActivityItem(JSON.parse(line));
+                if (item)
+                    activities.push(item);
+            }
+            catch {
+                // A concurrent append or an interrupted worker can leave an incomplete line.
+            }
+        }
+        return activities.sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
     }
     registerRecallEntry(entry) {
         const entryFile = path.join(this.recallRegistryDir(), `${entry.recall_id}.json`);
@@ -316,16 +359,38 @@ export class ArchiveStore {
             });
         }
         const attachFileRecall = (items, patches, makeId) => items.map((entry) => patches.has(entry.path) ? { ...entry, recall_id: makeId(entry.path) } : entry);
+        const redactedBlockers = metadataWithoutRecall.unverified_blockers.map((b) => ({
+            claim: redactSensitiveText(b.claim),
+            evidence: b.evidence ? redactSensitiveText(b.evidence) : null,
+        }));
+        const redactedCounterEvidence = metadataWithoutRecall.unverified_counter_evidence.map((c) => ({
+            claim: redactSensitiveText(c.claim),
+            evidence: c.evidence ? redactSensitiveText(c.evidence) : null,
+        }));
+        const reportPayload = {
+            source: 'executor_model_self_report',
+            verified: false,
+            reported_status: metadataWithoutRecall.reported_status,
+            blockers: redactedBlockers,
+            counter_evidence: redactedCounterEvidence,
+        };
+        const reportJsonText = `${JSON.stringify(reportPayload, null, 2)}\n`;
+        const reportFile = path.join(revDir, 'report.json');
+        writeAtomicText(reportFile, reportJsonText);
+        const reportRecallId = `rc_${taskId}_r${revision}_report`;
+        this.registerRecallEntry({
+            recall_id: reportRecallId,
+            task_id: taskId,
+            revision,
+            kind: 'report',
+            file_path_rel: path.relative(this.dataDir, reportFile),
+            byte_length: Buffer.byteLength(reportJsonText, 'utf8'),
+            created_at: now,
+        });
         const fullMeta = {
             ...metadataWithoutRecall,
-            unverified_blockers: metadataWithoutRecall.unverified_blockers.map((b) => ({
-                claim: redactSensitiveText(b.claim),
-                evidence: b.evidence ? redactSensitiveText(b.evidence) : null,
-            })),
-            unverified_counter_evidence: metadataWithoutRecall.unverified_counter_evidence.map((c) => ({
-                claim: redactSensitiveText(c.claim),
-                evidence: c.evidence ? redactSensitiveText(c.evidence) : null,
-            })),
+            unverified_blockers: redactedBlockers,
+            unverified_counter_evidence: redactedCounterEvidence,
             native_events: metadataWithoutRecall.native_events.map((e) => ({
                 source: e.source,
                 message: redactSensitiveText(e.message),
@@ -337,6 +402,7 @@ export class ArchiveStore {
                 ledger_diff: ledgerRecallId,
                 logs: logsRecallId,
                 raw_trace: traceRecallId,
+                report: reportRecallId,
                 ...(execDiffRecallId ? { exec_diff: execDiffRecallId } : {}),
                 ...(verifySideEffectRecallId ? { verify_side_effect_diff: verifySideEffectRecallId } : {}),
             },

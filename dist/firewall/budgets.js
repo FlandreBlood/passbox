@@ -1,3 +1,4 @@
+import { redactSensitiveText } from '../observability/redact.js';
 export const DEFAULT_BUDGETS = {
     statusBytes: 512,
     summaryBytes: 2 * 1024,
@@ -56,6 +57,43 @@ export function truncateUtf8ByBytes(input, maxBytes) {
         text: lo > 0 ? codepoints.slice(0, lo).join('') : '',
         truncated: true,
     };
+}
+const ACTIVITY_KINDS = new Set(['phase', 'command', 'tool', 'file_change', 'turn', 'notice']);
+const ACTIVITY_STATUSES = new Set(['started', 'completed', 'failed', 'declined', 'canceled', 'info']);
+export function sanitizeActivityItem(input) {
+    if (!input || typeof input !== 'object')
+        return null;
+    const { at, kind, label, status } = input;
+    if (typeof at !== 'string' || typeof label !== 'string' ||
+        !ACTIVITY_KINDS.has(kind) ||
+        !ACTIVITY_STATUSES.has(status))
+        return null;
+    const timestamp = Date.parse(at);
+    if (!Number.isFinite(timestamp))
+        return null;
+    return {
+        at: new Date(timestamp).toISOString(),
+        kind: kind,
+        label: truncateUtf8ByBytes(redactSensitiveText(label).replace(/\s+/g, ' ').trim(), 120).text,
+        status: status,
+    };
+}
+export function boundActivitySummary(items = [], previouslyOmitted = 0, maxBytes = DEFAULT_BUDGETS.summaryBytes) {
+    const ordered = items.map(sanitizeActivityItem).filter((item) => item !== null)
+        .sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
+    const budget = Math.min(maxBytes, DEFAULT_BUDGETS.summaryBytes);
+    const emptyBytes = utf8ByteLength(JSON.stringify({ activities: [], omitted_count: 0 })) - 1;
+    let start = ordered.length;
+    let itemsBytes = 0;
+    while (start > 0) {
+        const nextBytes = itemsBytes + utf8ByteLength(JSON.stringify(ordered[start - 1])) +
+            (start < ordered.length ? 1 : 0);
+        if (emptyBytes + nextBytes + String(previouslyOmitted + start - 1).length > budget)
+            break;
+        itemsBytes = nextBytes;
+        start--;
+    }
+    return { activities: ordered.slice(start), omitted_count: previouslyOmitted + start };
 }
 export function truncateByBytesAndLines(input, maxBytes, maxLines) {
     if (!input) {

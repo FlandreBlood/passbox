@@ -1,4 +1,4 @@
-import type { BudgetOptions } from '../types.js';
+import type { BudgetOptions, RunActivityItem } from '../types.js';
 export interface ResolvedBudgets {
     statusBytes: number;
     summaryBytes: number;
@@ -23,6 +23,11 @@ export declare function mcpWireSerializedBytes(innerText: string): number;
 export declare function truncateUtf8ByBytes(input: string, maxBytes: number): {
     text: string;
     truncated: boolean;
+};
+export declare function sanitizeActivityItem(input: unknown): RunActivityItem | null;
+export declare function boundActivitySummary(items?: readonly unknown[], previouslyOmitted?: number, maxBytes?: number): {
+    activities: RunActivityItem[];
+    omitted_count: number;
 };
 export declare function truncateByBytesAndLines(input: string, maxBytes: number, maxLines: number): {
     text: string;

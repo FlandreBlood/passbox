@@ -34,6 +34,7 @@ export function buildInitialDelegationPrompt(params) {
         `Explore, implement, and verify directly in the repository using your native tools. ` +
         `Return your final response strictly matching the provided JSON Schema ` +
         `(\`status\`: "completed" | "partial" | "blocked", \`blockers\`: [{claim, evidence}], \`counter_evidence\`: [{claim, evidence}]). ` +
+        `Keep each \`claim\` concise, non-redundant, and grounded in exact \`file:line\` references in \`evidence\`. ` +
         `Write \`claim\` descriptions in the same language as the Task Objective (e.g., Chinese or English) while keeping JSON keys strictly matching the schema. ` +
         `Do not mask real permission, sandbox, or environment blockers.`);
     return `${sections.join('\n\n')}\n`;

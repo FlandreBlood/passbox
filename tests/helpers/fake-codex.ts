@@ -6,6 +6,8 @@ import { randomUUID } from 'node:crypto';
 
 export interface FakeCodexStepBehavior {
   delay_ms?: number;
+  events?: Record<string, unknown>[];
+  events_after_delay?: Record<string, unknown>[];
   hang_ms?: number;
   spawn_sleeper_pid_file?: string;
   write_files?: Record<string, string>;
@@ -170,6 +172,7 @@ async function main(): Promise<void> {
 
   emit({ type: 'thread.started', thread_id: threadId });
   emit({ type: 'turn.started' });
+  for (const event of step.events ?? []) emit(event);
 
   if (step.stderr) {
     process.stderr.write(`${step.stderr}\n`);
@@ -244,6 +247,8 @@ async function main(): Promise<void> {
   if (step.delay_ms && step.delay_ms > 0) {
     await new Promise((r) => setTimeout(r, step.delay_ms));
   }
+
+  for (const event of step.events_after_delay ?? []) emit(event);
 
   if (step.hang_ms && step.hang_ms > 0) {
     await new Promise((r) => setTimeout(r, step.hang_ms));
